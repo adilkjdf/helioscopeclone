@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MapPin, Settings, Eye, Share2, FileText, Plus, Download, Trash2 } from 'lucide-react';
 import { Design, ProjectData } from '../types/project';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import NewDesignModal from './NewDesignModal';
 import { supabase } from '../integrations/supabase/client';
 

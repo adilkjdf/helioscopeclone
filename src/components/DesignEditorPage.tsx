@@ -3,7 +3,6 @@ import { ProjectData, Design } from '../types/project';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import DesignEditorSidebar from './DesignEditorSidebar';
 import { ArrowLeft } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
 
 interface DesignEditorPageProps {
   project: ProjectData;
@@ -21,13 +20,13 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
     : [37.7749, -122.4194]; // Default fallback
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-full w-full bg-gray-100">
       <DesignEditorSidebar
         design={design}
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
-      <main className="flex-1 flex flex-col relative">
+      <div className="flex-1 flex flex-col relative">
         <div className="absolute top-0 left-0 z-[1000] p-4">
           <button
             onClick={onBack}
@@ -53,7 +52,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
             {/* Map features like polygons, markers for modules will go here */}
           </MapContainer>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
