@@ -113,12 +113,10 @@ export const calculateAdvancedModuleLayout = (
 
   const rotatedBounds = bounds(rotatedPolygon);
   
-  const center = map.getCenter();
-  const pA = map.latLngToLayerPoint(center);
-  const pB = map.latLngToLayerPoint(map.getBounds().getNorthEast());
-  const distMeters = map.distance(center, map.getBounds().getNorthEast());
-  const distPixels = pA.distanceTo(pB);
-  const pixelsPerMeter = distPixels / distMeters;
+  const mapBounds = map.getBounds();
+  const mapContainerWidth = map.getSize().x;
+  const metersWidth = map.distance(mapBounds.getSouthWest(), mapBounds.getSouthEast());
+  const pixelsPerMeter = mapContainerWidth / metersWidth;
 
   const moduleWidth = orientation === 'Landscape' ? moduleHeightMeters : moduleWidthMeters;
   const moduleHeight = orientation === 'Landscape' ? moduleWidthMeters : moduleHeightMeters;
