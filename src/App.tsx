@@ -207,9 +207,12 @@ function App() {
       case 'project':
         return currentProject ? <ProjectPage project={currentProject} onBack={handleBackToDashboard} onSelectDesign={handleSelectDesign} /> : <DashboardHome onCreateProject={handleCreateProject} projects={[]} onSelectProject={handleSelectProject} onDeleteProject={handleDeleteProject} isLoading={true} />;
       case 'design_editor':
-        return currentProject && currentDesign 
-          ? <DesignEditorPage project={currentProject} design={currentDesign} onBack={handleBackToProject} /> 
-          : <ProjectPage project={currentProject!} onBack={handleBackToDashboard} onSelectDesign={handleSelectDesign} />;
+        if (currentProject && currentDesign) {
+          return <DesignEditorPage project={currentProject} design={currentDesign} onBack={handleBackToProject} />;
+        }
+        // By returning null here, we ensure that ProjectPage is unmounted when navigating to the editor,
+        // and re-mounted (triggering a data fetch) when navigating back. This fixes the stale data issue.
+        return null;
       case 'library_modules':
         return <ModulesPage onSaveModule={handleSaveModule} />;
       case 'library_inverters':
