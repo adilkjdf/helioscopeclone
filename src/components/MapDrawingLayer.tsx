@@ -85,7 +85,10 @@ const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChang
     const dx = p2_container.x - p1_container.x;
     const dy = p2_container.y - p1_container.y;
 
-    const normal = new Point(-dy, dx).normalize();
+    const normalVec = new Point(-dy, dx);
+    const dist = normalVec.distanceTo(new Point(0, 0));
+    const normal = dist > 0 ? normalVec.divideBy(dist) : new Point(0, 0);
+    
     const offset = 20;
     
     let offsetPoint = midpoint_container.add(normal.multiplyBy(offset));
