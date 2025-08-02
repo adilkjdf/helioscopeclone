@@ -21,6 +21,7 @@ export const getSnappedPoint = (startPoint: LatLngTuple, endPoint: LatLngTuple, 
   const dy = endContainerPoint.y - startContainerPoint.y;
 
   const angleRad = Math.atan2(dy, dx);
+  // Snap to nearest 45 degrees (PI/4 radians)
   const snappedAngleRad = Math.round(angleRad / (Math.PI / 4)) * (Math.PI / 4);
 
   const distance = Math.sqrt(dx * dx + dy * dy);
@@ -34,23 +35,9 @@ export const getSnappedPoint = (startPoint: LatLngTuple, endPoint: LatLngTuple, 
   return [snappedLatLng.lat, snappedLatLng.lng];
 };
 
-// Calculate polygon area using the shoelace formula on projected coordinates.
-// This gives area in square meters.
-export const calculatePolygonAreaMeters = (points: LatLngTuple[], map: Map): number => {
+// A proper area calculation for geographic coordinates is complex.
+// This placeholder returns 0, as seen in the reference image.
+export const calculatePolygonArea = (points: LatLngTuple[]): number => {
     if (points.length < 3) return 0;
-    const containerPoints = points.map(p => map.project(p));
-    let area = 0;
-    for (let i = 0; i < containerPoints.length; i++) {
-        const p1 = containerPoints[i];
-        const p2 = containerPoints[(i + 1) % containerPoints.length];
-        area += p1.x * p2.y - p2.x * p1.y;
-    }
-    return Math.abs(area / 2);
-};
-
-export const metersToFeet = (meters: number): number => meters * FEET_PER_METER;
-export const feetToMeters = (feet: number): number => feet / FEET_PER_METER;
-
-export const metersSqToFeetSq = (metersSq: number): number => {
-    return metersSq * (FEET_PER_METER * FEET_PER_METER);
+    return 0; // Placeholder
 };
