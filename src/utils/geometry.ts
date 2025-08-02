@@ -1,4 +1,5 @@
 import { Map, latLng, LatLngTuple, Point, bounds } from 'leaflet';
+import { FieldSegment, Module } from '../types/project';
 
 const FEET_PER_METER = 3.28084;
 
@@ -63,69 +64,99 @@ const isPointInPolygon = (point: Point, polygon: Point[]): boolean => {
     return isInside;
 };
 
-export const calculateModuleLayout = (
-  polygon: LatLngTuple[],
-  moduleWidth: number,
-  moduleHeight: number,
+export const calculateAdvancedModuleLayout = (
+  segment: FieldSegment,
+  module: Module,
   map: Map
-): { layout: LatLngTuple[][], count: number, azimuth: number } => {
-  if (polygon.length < 3 || !moduleWidth || !moduleHeight) return { layout: [], count: 0, azimuth: 0 };
+): { layout: LatLngTuple[][], count: number, nameplate: number, azimuth: number } => {
+  const {
+    points: polygon,
+    orientation = 'Landscape',
+    azimuth: segmentAzimuth,
+    rowSpacing = 2,
+    moduleSpacing = 0.1,
+  } = segment;
 
-  const projectedPolygon = polygon.map(p => map.project(latLng(p)));
+  const { width: moduleWidthMeters, height: moduleHeightMeters, max_power_pmp: modulePower } = module;
 
-  let longestEdgeIndex = 0;
-  let maxDist = 0;
-  for (let i = 0; i < projectedPolygon.length; i++) {
-    const p1 = projectedPolygon[i];
-    const p2 = projectedPolygon[(i + 1) % projectedPolygon.length];
-    const dist = p1.distanceTo(p2);
-    if (dist > maxDist) {
-      maxDist = dist;
+  if (polygon.length < 3 || !moduleWidthMeters || !moduleHeightMeters || !modulePower) {
+    return { layout: [], count: 0, nameplate: 0, azimuth: segment.azimuth };
+  }
+
+  const layerPolygon = polygon.map(p => map.latLngToLayerPoint(latLng(p)));
+
+  let longestEdgeIndex = -1, maxDistSq = 0;
+  for (let i = 0; i < layerPolygon.length; i++) {
+    const p1 = layerPolygon[i];
+    const p2 = layerPolygon[(i + 1) % layerPolygon.length];
+    const distSq = p1.distanceTo(p2);
+    if (distSq > maxDistSq) {
+      maxDistSq = distSq;
       longestEdgeIndex = i;
     }
   }
 
-  const p1 = projectedPolygon[longestEdgeIndex];
-  const p2 = projectedPolygon[(longestEdgeIndex + 1) % projectedPolygon.length];
-  const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-  const azimuth = (90 - angle * 180 / Math.PI + 360) % 360;
+  const p1 = layerPolygon[longestEdgeIndex];
+  const p2 = layerPolygon[(longestEdgeIndex + 1) % layerPolygon.length];
+  const defaultAngleRad = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+  const defaultAzimuth = (90 - defaultAngleRad * 180 / Math.PI + 360) % 360;
+  
+  const finalAzimuth = segmentAzimuth ?? defaultAzimuth;
+  const angle = (90 - finalAzimuth) * (Math.PI / 180);
 
-  const cos = Math.cos(-angle);
-  const sin = Math.sin(-angle);
-  const rotatedPolygon = projectedPolygon.map(p => new Point(
-    p.x * cos - p.y * sin,
-    p.x * sin + p.y * cos
+  const cos = Math.cos(-angle), sin = Math.sin(-angle);
+  const origin = layerPolygon[0];
+  const rotatedPolygon = layerPolygon.map(p => new Point(
+    (p.x - origin.x) * cos - (p.y - origin.y) * sin,
+    (p.x - origin.x) * sin + (p.y - origin.y) * cos
   ));
 
   const rotatedBounds = bounds(rotatedPolygon);
+  
+  const center = map.getCenter();
+  const pA = map.latLngToLayerPoint(center);
+  const pB = map.latLngToLayerPoint(map.getBounds().getNorthEast());
+  const distMeters = map.distance(center, map.getBounds().getNorthEast());
+  const distPixels = pA.distanceTo(pB);
+  const pixelsPerMeter = distPixels / distMeters;
+
+  const moduleWidth = orientation === 'Landscape' ? moduleHeightMeters : moduleWidthMeters;
+  const moduleHeight = orientation === 'Landscape' ? moduleWidthMeters : moduleHeightMeters;
+
+  const moduleWidthPx = moduleWidth * pixelsPerMeter;
+  const moduleHeightPx = moduleHeight * pixelsPerMeter;
+  const rowSpacingPx = (rowSpacing / FEET_PER_METER) * pixelsPerMeter;
+  const moduleSpacingPx = (moduleSpacing / FEET_PER_METER) * pixelsPerMeter;
+
+  const stepX = moduleWidthPx + moduleSpacingPx;
+  const stepY = moduleHeightPx + rowSpacingPx;
+
   const moduleLayout: LatLngTuple[][] = [];
+  let count = 0;
 
-  const moduleWidthProjected = moduleWidth / map.options.crs!.scale(map.getZoom());
-  const moduleHeightProjected = moduleHeight / map.options.crs!.scale(map.getZoom());
-
-  for (let y = rotatedBounds.min!.y; y < rotatedBounds.max!.y; y += moduleHeightProjected) {
-    for (let x = rotatedBounds.min!.x; x < rotatedBounds.max!.x; x += moduleWidthProjected) {
-      const moduleCenter = new Point(x + moduleWidthProjected / 2, y + moduleHeightProjected / 2);
+  for (let y = rotatedBounds.min!.y; y < rotatedBounds.max!.y; y += stepY) {
+    for (let x = rotatedBounds.min!.x; x < rotatedBounds.max!.x; x += stepX) {
+      const moduleCenter = new Point(x + moduleWidthPx / 2, y + moduleHeightPx / 2);
       if (isPointInPolygon(moduleCenter, rotatedPolygon)) {
         const modulePoints = [
-          new Point(x, y),
-          new Point(x + moduleWidthProjected, y),
-          new Point(x + moduleWidthProjected, y + moduleHeightProjected),
-          new Point(x, y + moduleHeightProjected),
+          new Point(x, y), new Point(x + moduleWidthPx, y),
+          new Point(x + moduleWidthPx, y + moduleHeightPx), new Point(x, y + moduleHeightPx),
         ];
-        const cos_a = Math.cos(angle);
-        const sin_a = Math.sin(angle);
-        const originalPoints = modulePoints.map(p => new Point(
-          p.x * cos_a - p.y * sin_a,
-          p.x * sin_a + p.y * cos_a
-        ));
+        const cos_a = Math.cos(angle), sin_a = Math.sin(angle);
+        const originalPoints = modulePoints.map(p => {
+          const rotatedX = p.x * cos_a - p.y * sin_a;
+          const rotatedY = p.x * sin_a + p.y * cos_a;
+          return new Point(rotatedX + origin.x, rotatedY + origin.y);
+        });
         moduleLayout.push(originalPoints.map(p => {
-          const latLng = map.unproject(p);
+          const latLng = map.layerPointToLatLng(p);
           return [latLng.lat, latLng.lng];
         }));
+        count++;
       }
     }
   }
 
-  return { layout: moduleLayout, count: moduleLayout.length, azimuth };
+  const nameplate = (count * modulePower) / 1000;
+  return { layout: moduleLayout, count, nameplate, azimuth: finalAzimuth };
 };

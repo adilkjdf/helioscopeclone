@@ -60,4 +60,13 @@ export interface FieldSegment {
   moduleId?: string;
   moduleLayout?: LatLngTuple[][]; // Array of polygons for each module
   azimuth: number; // For orientation
+  
+  // New properties
+  description?: string;
+  rackingType?: 'Fixed Tilt' | 'Flush Mount';
+  moduleTilt?: number;
+  orientation?: 'Portrait' | 'Landscape';
+  rowSpacing?: number;
+  moduleSpacing?: number;
+  setback?: number;
 }

@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
 import { useMap, Polygon, Marker } from 'react-leaflet';
 import { FieldSegment, Module } from '../types/project';
-import { calculatePolygonArea, calculateModuleLayout, calculateDistanceInFeet, getMidpoint } from '../utils/geometry';
+import { calculatePolygonArea, calculateAdvancedModuleLayout, calculateDistanceInFeet, getMidpoint } from '../utils/geometry';
 import { divIcon, LeafletEvent, LatLngTuple } from 'leaflet';
 
 interface FieldSegmentLayerProps {
   segment: FieldSegment;
   modules: Module[];
   onUpdate: (id: string, updates: Partial<FieldSegment>) => void;
+  onSelect: () => void;
 }
 
 const DraggableMarker: React.FC<{ position: any, onDrag: any }> = ({ position, onDrag }) => {
@@ -26,23 +27,24 @@ const DraggableMarker: React.FC<{ position: any, onDrag: any }> = ({ position, o
   );
 };
 
-const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules, onUpdate }) => {
+const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules, onUpdate, onSelect }) => {
   const map = useMap();
 
   useEffect(() => {
     const area = calculatePolygonArea(segment.points, map);
-    if (Math.abs(area - segment.area) > 0.1) {
-      onUpdate(segment.id, { area });
-    }
-
     const module = modules.find(m => m.id === segment.moduleId);
-    if (module && module.width && module.height) {
-      const { layout, count, azimuth } = calculateModuleLayout(segment.points, module.width, module.height, map);
-      onUpdate(segment.id, { moduleLayout: layout, moduleCount: count, azimuth });
-    } else if (segment.moduleCount > 0) {
-      onUpdate(segment.id, { moduleLayout: [], moduleCount: 0 });
+
+    if (module) {
+      const { layout, count, nameplate, azimuth } = calculateAdvancedModuleLayout(segment, module, map);
+      onUpdate(segment.id, { area, moduleLayout: layout, moduleCount: count, nameplate, azimuth });
+    } else if (segment.moduleCount > 0 || segment.moduleLayout?.length) {
+      onUpdate(segment.id, { area, moduleLayout: [], moduleCount: 0, nameplate: 0 });
+    } else {
+      if (Math.abs(area - segment.area) > 0.1) {
+        onUpdate(segment.id, { area });
+      }
     }
-  }, [segment.points, segment.moduleId, modules, map, onUpdate, segment.id]);
+  }, [segment, modules, map, onUpdate]);
 
   const handleMarkerDrag = (index: number, newLatLng: { lat: number, lng: number }) => {
     const newPoints = [...segment.points];
@@ -62,9 +64,13 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
 
   return (
     <>
-      <Polygon positions={segment.points} pathOptions={{ color: '#f97316', weight: 2, fillOpacity: 0.1 }} />
+      <Polygon 
+        positions={segment.points} 
+        pathOptions={{ color: '#f97316', weight: 2, fillOpacity: 0.2 }} 
+        eventHandlers={{ click: onSelect }}
+      />
       {segment.moduleLayout?.map((modulePolygon, i) => (
-        <Polygon key={i} positions={modulePolygon} pathOptions={{ color: '#4f46e5', weight: 1, fillColor: '#6366f1', fillOpacity: 0.7 }} />
+        <Polygon key={i} positions={modulePolygon} pathOptions={{ color: '#3b82f6', weight: 1, fillColor: '#60a5fa', fillOpacity: 0.8 }} />
       ))}
       {segment.points.map((p, i) => (
         <DraggableMarker key={i} position={p} onDrag={(newLatLng: any) => handleMarkerDrag(i, newLatLng)} />

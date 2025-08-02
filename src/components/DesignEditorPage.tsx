@@ -32,6 +32,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
   const [drawingPoints, setDrawingPoints] = useState<LatLngTuple[]>([]);
   const [drawingArea, setDrawingArea] = useState(0);
   const [fieldSegments, setFieldSegments] = useState<FieldSegment[]>([]);
+  const [selectedSegment, setSelectedSegment] = useState<FieldSegment | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
 
   const handleStartDrawing = () => {
     setIsDrawing(true);
+    setSelectedSegment(null);
     setDrawingPoints([]);
   };
 
@@ -57,9 +59,17 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
         area: 0,
         nameplate: 0,
         moduleCount: 0,
-        azimuth: 0,
+        azimuth: 180,
+        description: `Field Segment ${fieldSegments.length + 1}`,
+        rackingType: 'Fixed Tilt',
+        moduleTilt: 10,
+        orientation: 'Landscape',
+        rowSpacing: 2,
+        moduleSpacing: 0.1,
+        setback: 4,
       };
       setFieldSegments(prev => [...prev, newSegment]);
+      setSelectedSegment(newSegment);
     }
     setDrawingPoints([]);
   };
@@ -68,10 +78,16 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
 
   const handleUpdateSegment = (id: string, updates: Partial<FieldSegment>) => {
     setFieldSegments(prev => prev.map(seg => seg.id === id ? { ...seg, ...updates } : seg));
+    if (selectedSegment?.id === id) {
+      setSelectedSegment(prev => prev ? { ...prev, ...updates } : null);
+    }
   };
 
   const handleDeleteSegment = (id: string) => {
     setFieldSegments(prev => prev.filter(seg => seg.id !== id));
+    if (selectedSegment?.id === id) {
+      setSelectedSegment(null);
+    }
   };
 
   const mapCenter: [number, number] = project.coordinates ? [project.coordinates.lat, project.coordinates.lng] : [37.7749, -122.4194];
@@ -89,6 +105,8 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
         drawingArea={drawingArea}
         modules={modules}
         fieldSegments={fieldSegments}
+        selectedSegment={selectedSegment}
+        onSelectSegment={setSelectedSegment}
         onUpdateSegment={handleUpdateSegment}
         onDeleteSegment={handleDeleteSegment}
       />
@@ -113,7 +131,13 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
           )}
 
           {fieldSegments.map(segment => (
-            <FieldSegmentLayer key={segment.id} segment={segment} modules={modules} onUpdate={handleUpdateSegment} />
+            <FieldSegmentLayer 
+              key={segment.id} 
+              segment={segment} 
+              modules={modules} 
+              onUpdate={handleUpdateSegment}
+              onSelect={() => setSelectedSegment(segment)}
+            />
           ))}
         </MapContainer>
       </div>

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Design, Module, FieldSegment } from '../types/project';
-import { Settings, RotateCcw, RotateCw, LayoutGrid, Eye, Zap, TestTube, Plus, PanelLeftClose, PanelLeftOpen, Trash2 } from 'lucide-react';
+import { Settings, RotateCcw, RotateCw, LayoutGrid, Eye, Zap, TestTube, Plus, PanelLeftClose, PanelLeftOpen, Trash2, ArrowLeft } from 'lucide-react';
 import DrawingControls from './DrawingControls';
 import SelectField from './SelectField';
+import FormField from './FormField';
 
 interface DesignEditorSidebarProps {
   design: Design;
@@ -15,11 +16,11 @@ interface DesignEditorSidebarProps {
   drawingArea: number;
   modules: Module[];
   fieldSegments: FieldSegment[];
+  selectedSegment: FieldSegment | null;
+  onSelectSegment: (segment: FieldSegment | null) => void;
   onUpdateSegment: (id: string, updates: Partial<FieldSegment>) => void;
   onDeleteSegment: (id: string) => void;
 }
-
-type Tab = 'mechanical' | 'keepouts' | 'electrical' | 'advanced';
 
 const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({ 
   design, 
@@ -32,20 +33,14 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
   drawingArea,
   modules,
   fieldSegments,
+  selectedSegment,
+  onSelectSegment,
   onUpdateSegment,
   onDeleteSegment
 }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('mechanical');
-
-  const tabs = [
-    { id: 'mechanical', label: 'Mechanical', icon: LayoutGrid },
-    { id: 'keepouts', label: 'Keepouts', icon: Eye },
-    { id: 'electrical', label: 'Electrical', icon: Zap },
-    { id: 'advanced', label: 'Advanced', icon: TestTube },
-  ];
-
-  const moduleOptions = modules.map(m => ({ value: m.id, label: m.model_name }));
-  const totalModules = fieldSegments.reduce((sum, seg) => sum + seg.moduleCount, 0);
+  const moduleOptions = modules.map(m => ({ value: m.id, label: `${m.manufacturer} ${m.model_name}` }));
+  const orientationOptions = [{ value: 'Landscape', label: 'Landscape (Horizontal)' }, { value: 'Portrait', label: 'Portrait (Vertical)' }];
+  const rackingOptions = [{ value: 'Fixed Tilt', label: 'Fixed Tilt Racking' }, { value: 'Flush Mount', label: 'Flush Mount' }];
 
   if (!isOpen) {
     return (
@@ -69,61 +64,75 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
     );
   }
 
+  if (selectedSegment) {
+    const selectedModule = modules.find(m => m.id === selectedSegment.moduleId);
+    return (
+      <aside className="w-96 bg-white border-r shadow-lg flex flex-col h-screen">
+        <div className="p-4 border-b flex-shrink-0">
+          <button onClick={() => onSelectSegment(null)} className="text-sm text-blue-600 hover:underline flex items-center space-x-1 mb-2">
+            <ArrowLeft size={14} />
+            <span>Back to list</span>
+          </button>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold text-gray-800">{selectedSegment.description || 'Field Segment'}</h2>
+            <button onClick={() => onDeleteSegment(selectedSegment.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"><Trash2 size={16} /></button>
+          </div>
+          <div className="text-sm text-gray-600 mt-1">
+            <p>Modules: {selectedSegment.moduleCount} ({selectedSegment.nameplate.toFixed(2)} kW)</p>
+            <p>Area: {selectedSegment.area.toFixed(1)} ft²</p>
+          </div>
+        </div>
+        <div className="flex-grow p-4 overflow-y-auto space-y-4 text-sm">
+          <FormField label="Description" id="seg-desc" value={selectedSegment.description || ''} onChange={val => onUpdateSegment(selectedSegment.id, { description: val })} />
+          <SelectField label="Module" id="seg-module" value={selectedSegment.moduleId || ''} onChange={val => onUpdateSegment(selectedSegment.id, { moduleId: val })} options={moduleOptions} />
+          <SelectField label="Racking" id="seg-racking" value={selectedSegment.rackingType || ''} onChange={val => onUpdateSegment(selectedSegment.id, { rackingType: val as any })} options={rackingOptions} />
+          <div className="grid grid-cols-2 gap-4">
+            <FormField label="Module Azimuth" id="seg-azimuth" type="number" value={selectedSegment.azimuth} onChange={val => onUpdateSegment(selectedSegment.id, { azimuth: parseFloat(val) })} />
+            <FormField label="Module Tilt" id="seg-tilt" type="number" value={selectedSegment.moduleTilt || 0} onChange={val => onUpdateSegment(selectedSegment.id, { moduleTilt: parseFloat(val) })} />
+          </div>
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold mb-2 text-gray-700">Automatic Layout Rules</h4>
+            <SelectField label="Default Orientation" id="seg-orientation" value={selectedSegment.orientation || ''} onChange={val => onUpdateSegment(selectedSegment.id, { orientation: val as any })} options={orientationOptions} />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Row Spacing (ft)" id="seg-row-spacing" type="number" value={selectedSegment.rowSpacing || 0} onChange={val => onUpdateSegment(selectedSegment.id, { rowSpacing: parseFloat(val) })} />
+              <FormField label="Module Spacing (ft)" id="seg-module-spacing" type="number" value={selectedSegment.moduleSpacing || 0} step={0.01} onChange={val => onUpdateSegment(selectedSegment.id, { moduleSpacing: parseFloat(val) })} />
+            </div>
+          </div>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside className="w-96 bg-white border-r shadow-lg flex flex-col h-screen">
-      <div className="p-4 border-b">
-        <div className="flex justify-between items-center mb-4">
+      <div className="p-4 border-b flex-shrink-0">
+        <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">{design.name}</h2>
-          <div className="flex items-center space-x-2">
-            <button className="p-2 hover:bg-gray-100 rounded-md"><Settings className="w-5 h-5 text-gray-600" /></button>
-            <button onClick={onToggle} className="p-2 hover:bg-gray-100 rounded-md"><PanelLeftClose className="w-6 h-6 text-gray-600" /></button>
-          </div>
-        </div>
-        <div className="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
-          <div className="flex items-center space-x-1"><span className="text-sm font-medium text-green-600">Saved</span><button className="p-1.5 hover:bg-gray-200 rounded-md"><RotateCcw className="w-4 h-4 text-gray-600" /></button><button className="p-1.5 hover:bg-gray-200 rounded-md"><RotateCw className="w-4 h-4 text-gray-600" /></button></div>
-          <button className="px-4 py-1.5 bg-orange-500 text-white rounded-md text-sm font-semibold hover:bg-orange-600 flex items-center space-x-2"><span>Array</span><Eye className="w-4 h-4" /></button>
+          <button onClick={onToggle} className="p-2 hover:bg-gray-100 rounded-md"><PanelLeftClose className="w-6 h-6 text-gray-600" /></button>
         </div>
       </div>
-
-      <div className="border-b"><nav className="flex justify-around">{tabs.map(tab => { const Icon = tab.icon; return (<button key={tab.id} onClick={() => setActiveTab(tab.id as Tab)} className={`flex-1 py-3 px-2 text-sm font-medium flex flex-col items-center space-y-1 transition-colors ${activeTab === tab.id ? 'text-orange-600 border-b-2 border-orange-600 bg-orange-50' : 'text-gray-500 hover:bg-gray-100'}`}><Icon className="w-5 h-5" /><span>{tab.label}</span></button>);})}</nav></div>
-
-      <div className="flex-grow p-4 overflow-y-auto space-y-6">
-        {activeTab === 'mechanical' && (
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold text-gray-800">Field Segments</h3>
-              <button onClick={onStartDrawing} className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300 flex items-center space-x-1"><Plus className="w-4 h-4" /><span>New</span></button>
-            </div>
-            <div className="mb-4"><label className="flex items-center text-sm text-gray-700"><input type="checkbox" defaultChecked className="mr-2 h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500" />Field segments cast shadows</label></div>
-            
-            <div className="space-y-4">
-              {fieldSegments.length === 0 ? (
-                <div className="text-center p-6 text-gray-500 border-2 border-dashed rounded-lg">No field segments created.</div>
-              ) : (
-                fieldSegments.map((segment, index) => (
-                  <div key={segment.id} className="border rounded-lg p-4 bg-white space-y-3">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-semibold text-gray-800">Field Segment {index + 1}</h4>
-                      <button onClick={() => onDeleteSegment(segment.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 size={16} /></button>
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <div className="flex justify-between"><span>Area:</span> <span className="font-medium">{segment.area.toFixed(1)} ft²</span></div>
-                      <div className="flex justify-between"><span>Azimuth:</span> <span className="font-medium">{segment.azimuth.toFixed(1)}°</span></div>
-                      <div className="flex justify-between"><span>Modules:</span> <span className="font-medium">{segment.moduleCount}</span></div>
-                    </div>
-                    <SelectField label="Module" id={`module-select-${segment.id}`} value={segment.moduleId || ''} onChange={(val) => onUpdateSegment(segment.id, { moduleId: val })} options={moduleOptions} />
-                  </div>
-                ))
-              )}
-            </div>
-            <div className="mt-4 pt-4 border-t text-sm font-medium text-gray-700">
-              Total Modules: {totalModules}
-            </div>
-          </div>
-        )}
-        {activeTab === 'keepouts' && <div className="text-center text-gray-500 p-8">Keepouts settings will be here.</div>}
-        {activeTab === 'electrical' && <div className="text-center text-gray-500 p-8">Electrical settings will be here.</div>}
-        {activeTab === 'advanced' && <div className="text-center text-gray-500 p-8">Advanced settings will be here.</div>}
+      <div className="flex-grow p-4 overflow-y-auto space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="font-semibold text-gray-800">Field Segments</h3>
+          <button onClick={onStartDrawing} className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300 flex items-center space-x-1"><Plus className="w-4 h-4" /><span>New</span></button>
+        </div>
+        <div className="space-y-2">
+          {fieldSegments.length === 0 ? (
+            <div className="text-center p-6 text-gray-500 border-2 border-dashed rounded-lg">No field segments created.</div>
+          ) : (
+            fieldSegments.map((segment) => (
+              <div key={segment.id} onClick={() => onSelectSegment(segment)} className="border rounded-lg p-3 bg-white hover:bg-gray-50 cursor-pointer">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-semibold text-gray-800">{segment.description || `Field Segment ${segment.id.substring(0,4)}`}</h4>
+                  <button onClick={(e) => { e.stopPropagation(); onDeleteSegment(segment.id); }} className="p-1 text-gray-400 hover:text-red-600"><Trash2 size={16} /></button>
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {segment.moduleCount} modules ({segment.nameplate.toFixed(2)} kW)
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </aside>
   );
