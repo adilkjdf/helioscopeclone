@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProjectData, Design } from '../types/project';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import DesignEditorSidebar from './DesignEditorSidebar';
 import { ArrowLeft } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
@@ -12,6 +12,21 @@ interface DesignEditorPageProps {
 }
 
 const MAPTILER_API_KEY = 'aTChQEvBqKVcP0AXd2bH';
+
+// Helper component to invalidate map size on sidebar toggle
+const MapResizer: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => {
+  const map = useMap();
+  useEffect(() => {
+    // Wait for sidebar animation to complete before resizing
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 300); // Adjust timing to match your sidebar's transition duration
+
+    return () => clearTimeout(timer);
+  }, [isSidebarOpen, map]);
+
+  return null;
+};
 
 const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, onBack }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -41,7 +56,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
         <MapContainer
           center={mapCenter}
           zoom={19}
-          maxZoom={24}
+          maxZoom={21}
           className="h-full w-full"
           scrollWheelZoom={true}
         >
@@ -49,6 +64,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
             url={`https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_API_KEY}`}
             attribution='&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
           />
+          <MapResizer isSidebarOpen={isSidebarOpen} />
           {/* Map features like polygons, markers for modules will go here */}
         </MapContainer>
       </div>
