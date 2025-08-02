@@ -26,7 +26,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
-      <div className="flex-1 flex flex-col relative">
+      <div className="flex-1 relative">
         <div className="absolute top-0 left-0 z-[1000] p-4">
           <button
             onClick={onBack}
@@ -37,21 +37,19 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
             <span>Back to Project</span>
           </button>
         </div>
-        <div className="flex-1 h-full">
-          <MapContainer
-            center={mapCenter}
-            zoom={19}
-            maxZoom={22}
-            className="h-full w-full"
-            scrollWheelZoom={true}
-          >
-            <TileLayer
-              url={`https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_API_KEY}`}
-              attribution='&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
-            />
-            {/* Map features like polygons, markers for modules will go here */}
-          </MapContainer>
-        </div>
+        <MapContainer
+          center={mapCenter}
+          zoom={19}
+          maxZoom={22}
+          className="h-full w-full"
+          scrollWheelZoom={true}
+        >
+          <TileLayer
+            url={`https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_API_KEY}`}
+            attribution='&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+          />
+          {/* Map features like polygons, markers for modules will go here */}
+        </MapContainer>
       </div>
     </div>
   );

@@ -112,25 +112,16 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({ design, isOpe
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-t">
-                    <td className="p-2 font-medium text-blue-600">Field Segment 1</td>
-                    <td className="p-2 text-gray-600">116 (37.12 KW)</td>
-                    <td className="p-2">
-                      <div className="flex items-center space-x-1">
-                        <button className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-md">
-                          <Send className="w-4 h-4 text-gray-700" />
-                        </button>
-                        <button className="p-1.5 bg-red-100 hover:bg-red-200 rounded-md">
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
-                      </div>
+                  <tr>
+                    <td colSpan={3} className="text-center p-4 text-gray-500">
+                      No field segments created.
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <div className="mt-2 text-sm text-gray-600">
-              116 Modules, 37.12 kWp
+              0 Modules, 0.00 kWp
             </div>
           </div>
         )}
