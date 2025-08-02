@@ -136,14 +136,18 @@ export const calculateAdvancedModuleLayout = (
 
   for (let y = rotatedBounds.min!.y; y < rotatedBounds.max!.y; y += stepY) {
     for (let x = rotatedBounds.min!.x; x < rotatedBounds.max!.x; x += stepX) {
-      const moduleCenter = new Point(x + moduleWidthPx / 2, y + moduleHeightPx / 2);
-      if (isPointInPolygon(moduleCenter, rotatedPolygon)) {
-        const modulePoints = [
-          new Point(x, y), new Point(x + moduleWidthPx, y),
-          new Point(x + moduleWidthPx, y + moduleHeightPx), new Point(x, y + moduleHeightPx),
-        ];
+      const moduleCorners = [
+        new Point(x, y),
+        new Point(x + moduleWidthPx, y),
+        new Point(x + moduleWidthPx, y + moduleHeightPx),
+        new Point(x, y + moduleHeightPx),
+      ];
+
+      const allCornersIn = moduleCorners.every(corner => isPointInPolygon(corner, rotatedPolygon));
+
+      if (allCornersIn) {
         const cos_a = Math.cos(angle), sin_a = Math.sin(angle);
-        const originalPoints = modulePoints.map(p => {
+        const originalPoints = moduleCorners.map(p => {
           const rotatedX = p.x * cos_a - p.y * sin_a;
           const rotatedY = p.x * sin_a + p.y * cos_a;
           return new Point(rotatedX + origin.x, rotatedY + origin.y);
