@@ -7,6 +7,7 @@ export interface Design {
   name: string;
   lastModified: Date;
   nameplate: string;
+  field_segments?: FieldSegment[];
 }
 
 export interface ProjectData {

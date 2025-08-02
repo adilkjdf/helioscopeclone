@@ -51,6 +51,7 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
             name: d.name,
             lastModified: new Date(d.last_modified),
             nameplate: d.nameplate,
+            field_segments: d.field_segments || [],
           }));
           setDesigns(formattedDesigns);
         }
@@ -99,6 +100,7 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
         name: data.name,
         lastModified: new Date(data.last_modified),
         nameplate: data.nameplate,
+        field_segments: data.field_segments || [],
       };
       setDesigns(prev => [newDesign, ...prev]);
     } catch (error) {
