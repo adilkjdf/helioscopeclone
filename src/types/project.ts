@@ -32,7 +32,7 @@ export interface MapSettings {
 }
 
 export interface PanFile {
-  [key: string]: string | number;
+  [key:string]: string | number;
 }
 
 export interface Module {
@@ -43,8 +43,8 @@ export interface Module {
   technology?: string;
   max_power_pmp?: number;
   raw_pan_data?: PanFile;
-  width?: number;
-  height?: number;
+  width?: number;  // in meters
+  height?: number; // in meters
   voc?: number;
   isc?: number;
   vmp?: number;
@@ -54,6 +54,10 @@ export interface Module {
 export interface FieldSegment {
   id: string;
   points: LatLngTuple[];
-  area: number;
-  nameplate: number;
+  area: number; // in sq feet
+  nameplate: number; // in kW
+  moduleCount: number;
+  moduleId?: string;
+  moduleLayout?: LatLngTuple[][]; // Array of polygons for each module
+  azimuth: number; // For orientation
 }
