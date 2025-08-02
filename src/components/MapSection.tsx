@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Map, Marker, MapRef } from 'react-map-gl';
+import Map, { Marker, MapRef } from 'react-map-gl';
 import { MapPin, Map as MapIcon, Satellite } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 
