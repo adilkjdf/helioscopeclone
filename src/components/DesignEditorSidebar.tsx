@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Design, Module, FieldSegment } from '../types/project';
-import { Settings, RotateCcw, RotateCw, LayoutGrid, Eye, Zap, TestTube, Plus, PanelLeftClose, PanelLeftOpen, Trash2, ArrowLeft } from 'lucide-react';
+import { Settings, RotateCcw, RotateCw, LayoutGrid, Eye, Zap, TestTube, Plus, PanelLeftClose, PanelLeftOpen, Trash2, ArrowLeft, Save } from 'lucide-react';
 import DrawingControls from './DrawingControls';
 import SelectField from './SelectField';
 import FormField from './FormField';
@@ -42,6 +42,28 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
   const orientationOptions = [{ value: 'Landscape', label: 'Landscape (Horizontal)' }, { value: 'Portrait', label: 'Portrait (Vertical)' }];
   const rackingOptions = [{ value: 'Fixed Tilt', label: 'Fixed Tilt Racking' }, { value: 'Flush Mount', label: 'Flush Mount' }];
 
+  const [editedSegment, setEditedSegment] = useState<FieldSegment | null>(null);
+  const [isSaved, setIsSaved] = useState(true);
+
+  useEffect(() => {
+    setEditedSegment(selectedSegment);
+    setIsSaved(true);
+  }, [selectedSegment]);
+
+  const handleFieldChange = (updates: Partial<FieldSegment>) => {
+    if (editedSegment) {
+      setEditedSegment({ ...editedSegment, ...updates });
+      setIsSaved(false);
+    }
+  };
+
+  const handleSaveChanges = () => {
+    if (editedSegment) {
+      onUpdateSegment(editedSegment.id, editedSegment);
+      setIsSaved(true);
+    }
+  };
+
   if (!isOpen) {
     return (
       <div className="bg-white p-2 border-r h-screen">
@@ -64,7 +86,7 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
     );
   }
 
-  if (selectedSegment) {
+  if (selectedSegment && editedSegment) {
     return (
       <aside className="w-96 bg-white border-r shadow-lg flex flex-col h-screen">
         <div className="p-4 border-b flex-shrink-0">
@@ -73,7 +95,7 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
             <span>Back to list</span>
           </button>
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-gray-800">{selectedSegment.description || 'Field Segment'}</h2>
+            <h2 className="text-lg font-bold text-gray-800">{editedSegment.description || 'Field Segment'}</h2>
             <button onClick={() => onDeleteSegment(selectedSegment.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"><Trash2 size={16} /></button>
           </div>
           <div className="text-sm text-gray-600 mt-1">
@@ -82,26 +104,38 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
           </div>
         </div>
         <div className="flex-grow p-4 overflow-y-auto space-y-4 text-sm">
-          <FormField label="Description" id="seg-desc" value={selectedSegment.description || ''} onChange={val => onUpdateSegment(selectedSegment.id, { description: val })} />
-          <SelectField label="Module" id="seg-module" value={selectedSegment.moduleId || ''} onChange={val => onUpdateSegment(selectedSegment.id, { moduleId: val })} options={moduleOptions} />
+          <FormField label="Description" id="seg-desc" value={editedSegment.description || ''} onChange={val => handleFieldChange({ description: val })} />
+          <SelectField label="Module" id="seg-module" value={editedSegment.moduleId || ''} onChange={val => handleFieldChange({ moduleId: val })} options={moduleOptions} />
           
-          {selectedSegment.moduleId && (
+          {editedSegment.moduleId && (
             <>
-              <SelectField label="Racking" id="seg-racking" value={selectedSegment.rackingType || ''} onChange={val => onUpdateSegment(selectedSegment.id, { rackingType: val as any })} options={rackingOptions} />
+              <SelectField label="Racking" id="seg-racking" value={editedSegment.rackingType || ''} onChange={val => handleFieldChange({ rackingType: val as any })} options={rackingOptions} />
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Module Azimuth" id="seg-azimuth" type="number" value={selectedSegment.azimuth} onChange={val => onUpdateSegment(selectedSegment.id, { azimuth: parseFloat(val) })} />
-                <FormField label="Module Tilt" id="seg-tilt" type="number" value={selectedSegment.moduleTilt || 0} onChange={val => onUpdateSegment(selectedSegment.id, { moduleTilt: parseFloat(val) })} />
+                <FormField label="Module Azimuth" id="seg-azimuth" type="number" value={editedSegment.azimuth} onChange={val => handleFieldChange({ azimuth: parseFloat(val) })} />
+                <FormField label="Module Tilt" id="seg-tilt" type="number" value={editedSegment.moduleTilt || 0} onChange={val => handleFieldChange({ moduleTilt: parseFloat(val) })} />
               </div>
               <div className="p-3 bg-gray-50 rounded-lg">
                 <h4 className="font-semibold mb-2 text-gray-700">Automatic Layout Rules</h4>
-                <SelectField label="Default Orientation" id="seg-orientation" value={selectedSegment.orientation || ''} onChange={val => onUpdateSegment(selectedSegment.id, { orientation: val as any })} options={orientationOptions} />
+                <SelectField label="Default Orientation" id="seg-orientation" value={editedSegment.orientation || ''} onChange={val => handleFieldChange({ orientation: val as any })} options={orientationOptions} />
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField label="Row Spacing (ft)" id="seg-row-spacing" type="number" value={selectedSegment.rowSpacing || 0} onChange={val => onUpdateSegment(selectedSegment.id, { rowSpacing: parseFloat(val) })} />
-                  <FormField label="Module Spacing (ft)" id="seg-module-spacing" type="number" value={selectedSegment.moduleSpacing || 0} step={0.01} onChange={val => onUpdateSegment(selectedSegment.id, { moduleSpacing: parseFloat(val) })} />
+                  <FormField label="Row Spacing (ft)" id="seg-row-spacing" type="number" value={editedSegment.rowSpacing || 0} onChange={val => handleFieldChange({ rowSpacing: parseFloat(val) })} />
+                  <FormField label="Module Spacing (ft)" id="seg-module-spacing" type="number" value={editedSegment.moduleSpacing || 0} step={0.01} onChange={val => handleFieldChange({ moduleSpacing: parseFloat(val) })} />
                 </div>
               </div>
             </>
           )}
+        </div>
+        <div className="flex-shrink-0 p-4 border-t bg-gray-50">
+            <button
+                onClick={handleSaveChanges}
+                disabled={isSaved}
+                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 
+                           transition-colors disabled:opacity-50 disabled:cursor-not-allowed 
+                           flex items-center justify-center space-x-2 font-semibold"
+            >
+                <Save className="w-5 h-5" />
+                <span>{isSaved ? 'Saved' : 'Save Changes'}</span>
+            </button>
         </div>
       </aside>
     );
