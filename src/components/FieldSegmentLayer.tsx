@@ -99,28 +99,34 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
 
   return (
     <>
+      {/* Main outline of the segment */}
       <Polygon 
         positions={segment.points} 
         pathOptions={{ color: '#ca8a04', weight: 2, fill: false }} 
         eventHandlers={{ click: onSelect }}
       />
+
+      {/* Orange background for the buildable area (or whole area if no setback) */}
+      <Polygon
+        positions={insetPolygon.length > 0 ? insetPolygon : segment.points}
+        pathOptions={{ color: 'transparent', weight: 0, fillColor: '#f97316', fillOpacity: 0.2 }}
+        eventHandlers={{ click: onSelect }}
+      />
+
+      {/* Green setback area (donut shape) if setback is defined */}
       {insetPolygon.length > 0 && (
-        <>
-          {/* Setback area (light green) */}
-          <Polygon 
-            positions={[segment.points, insetPolygon]}
-            pathOptions={{ color: 'transparent', weight: 0, fillColor: '#a7f3d0', fillOpacity: 0.5 }}
-          />
-          {/* Placeable area background (orange) */}
-          <Polygon
-            positions={insetPolygon}
-            pathOptions={{ color: 'transparent', weight: 0, fillColor: '#f97316', fillOpacity: 0.2 }}
-          />
-        </>
+        <Polygon 
+          positions={[segment.points, insetPolygon]}
+          pathOptions={{ color: 'transparent', weight: 0, fillColor: '#a7f3d0', fillOpacity: 0.5 }}
+        />
       )}
+
+      {/* Render the blue module polygons on top */}
       {segment.moduleLayout?.map((modulePolygon, i) => (
         <Polygon key={i} positions={modulePolygon} pathOptions={{ color: 'white', weight: 1, fillColor: '#3b82f6', fillOpacity: 0.8 }} />
       ))}
+      
+      {/* Draggable vertices and length markers */}
       {segment.points.map((p, i) => (
         <DraggableMarker key={i} position={p} onDrag={(newLatLng: any) => handleMarkerDrag(i, newLatLng)} />
       ))}
