@@ -18,6 +18,7 @@ function App() {
   const [currentProject, setCurrentProject] = useState<ProjectData | null>(null);
   const [currentDesign, setCurrentDesign] = useState<Design | null>(null);
   const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [projectPageKey, setProjectPageKey] = useState(0);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -146,6 +147,7 @@ function App() {
   const handleBackToProject = () => {
     setCurrentView('project');
     setCurrentDesign(null);
+    setProjectPageKey(prev => prev + 1); // Force remount of ProjectPage to refetch data
   };
 
   const handleSaveModule = async (moduleData: Module) => {
@@ -205,13 +207,11 @@ function App() {
                   isLoading={isLoadingProjects}
                 />;
       case 'project':
-        return currentProject ? <ProjectPage project={currentProject} onBack={handleBackToDashboard} onSelectDesign={handleSelectDesign} /> : <DashboardHome onCreateProject={handleCreateProject} projects={[]} onSelectProject={handleSelectProject} onDeleteProject={handleDeleteProject} isLoading={true} />;
+        return currentProject ? <ProjectPage key={projectPageKey} project={currentProject} onBack={handleBackToDashboard} onSelectDesign={handleSelectDesign} /> : <DashboardHome onCreateProject={handleCreateProject} projects={[]} onSelectProject={handleSelectProject} onDeleteProject={handleDeleteProject} isLoading={true} />;
       case 'design_editor':
         if (currentProject && currentDesign) {
           return <DesignEditorPage project={currentProject} design={currentDesign} onBack={handleBackToProject} />;
         }
-        // By returning null here, we ensure that ProjectPage is unmounted when navigating to the editor,
-        // and re-mounted (triggering a data fetch) when navigating back. This fixes the stale data issue.
         return null;
       case 'library_modules':
         return <ModulesPage onSaveModule={handleSaveModule} />;

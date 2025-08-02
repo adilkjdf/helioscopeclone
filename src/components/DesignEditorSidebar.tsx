@@ -57,6 +57,15 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
     }
   };
 
+  const handleModuleChange = (moduleId: string) => {
+    if (editedSegment) {
+      const updates: Partial<FieldSegment> = { moduleId };
+      setEditedSegment(prev => ({ ...prev!, ...updates }));
+      onUpdateSegment(editedSegment.id, updates); // Immediately trigger layout calculation
+      setIsSaved(false);
+    }
+  };
+
   const handleSaveChanges = () => {
     if (editedSegment) {
       onUpdateSegment(editedSegment.id, editedSegment);
@@ -117,7 +126,7 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
         </div>
         <div className="flex-grow p-4 overflow-y-auto space-y-4 text-sm">
           <FormField label="Description" id="seg-desc" value={editedSegment.description || ''} onChange={val => handleFieldChange({ description: val })} />
-          <SelectField label="Module" id="seg-module" value={editedSegment.moduleId || ''} onChange={val => handleFieldChange({ moduleId: val })} options={moduleOptions} />
+          <SelectField label="Module" id="seg-module" value={editedSegment.moduleId || ''} onChange={handleModuleChange} options={moduleOptions} />
           
           {editedSegment.moduleId && (
             <>
