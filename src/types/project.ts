@@ -51,9 +51,25 @@ export interface Module {
   imp?: number;
 }
 
+export interface LayoutRules {
+  orientation: 'landscape' | 'portrait';
+  rowSpacing: number;
+  moduleSpacing: number;
+  setback: number;
+  azimuth: number;
+  tilt: number;
+  frameSizeUp: number;
+  frameSizeWide: number;
+}
+
 export interface FieldSegment {
   id: string;
+  name: string;
   points: LatLngTuple[];
   area: number;
+  moduleLayout?: LatLngTuple[][];
+  moduleCount: number;
   nameplate: number;
+  selectedModuleId?: string;
+  layoutRules: LayoutRules;
 }
