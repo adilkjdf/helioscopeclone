@@ -1,21 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MapPin, Settings, Eye, Share2, FileText, Plus, Download, Trash2 } from 'lucide-react';
 import { Design, ProjectData } from '../types/project';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { Map, Marker } from 'react-map-gl';
+import maplibregl from 'maplibre-gl';
 import NewDesignModal from './NewDesignModal';
 import { supabase } from '../integrations/supabase/client';
 
-// Fix for default markers in react-leaflet
-import L from 'leaflet';
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// NOTE: In a production app, this key should be stored in an environment variable.
 const MAPTILER_API_KEY = 'aTChQEvBqKVcP0AXd2bH';
 
 interface ProjectPageProps {
@@ -426,18 +416,19 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
               </div>
               <div className="h-64 relative z-0">
                 {project.coordinates && (
-                  <MapContainer
-                    center={[project.coordinates.lat, project.coordinates.lng]}
-                    zoom={16}
-                    className="h-full w-full"
-                    scrollWheelZoom={false}
+                  <Map
+                    mapLib={maplibregl}
+                    initialViewState={{
+                      longitude: project.coordinates.lng,
+                      latitude: project.coordinates.lat,
+                      zoom: 16,
+                    }}
+                    style={{ width: '100%', height: '100%' }}
+                    mapStyle={`https://api.maptiler.com/maps/satellite/style.json?key=${MAPTILER_API_KEY}`}
+                    scrollZoom={false}
                   >
-                    <TileLayer
-                      url={`https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_API_KEY}`}
-                      attribution='&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
-                    />
-                    <Marker position={[project.coordinates.lat, project.coordinates.lng]} />
-                  </MapContainer>
+                    <Marker longitude={project.coordinates.lng} latitude={project.coordinates.lat} />
+                  </Map>
                 )}
               </div>
             </div>
