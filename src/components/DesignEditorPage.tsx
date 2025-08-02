@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ProjectData, Design, FieldSegment, Module } from '../types/project';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import DesignEditorSidebar from './DesignEditorSidebar';
@@ -51,12 +51,12 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift' && selectedSegment) {
+      if (e.key === 'Control' && selectedSegment) {
         setIsRotating(true);
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
+      if (e.key === 'Control') {
         setIsRotating(false);
       }
     };
@@ -124,15 +124,21 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
 
   const handleClearDrawing = () => setDrawingPoints([]);
 
-  const handleUpdateSegment = (id: string, updates: Partial<FieldSegment>) => {
-    const updatedSegments = fieldSegments.map(seg => seg.id === id ? { ...seg, ...updates } : seg);
-    setFieldSegments(updatedSegments);
-    saveFieldSegments(updatedSegments);
-    if (selectedSegment?.id === id) {
-      const newSelectedSegment = updatedSegments.find(seg => seg.id === id);
-      setSelectedSegment(newSelectedSegment || null);
-    }
-  };
+  const handleUpdateSegment = useCallback((id: string, updates: Partial<FieldSegment>) => {
+    setFieldSegments(currentSegments => {
+        const updatedSegments = currentSegments.map(seg => seg.id === id ? { ...seg, ...updates } : seg);
+        saveFieldSegments(updatedSegments);
+        
+        setSelectedSegment(currentSelected => {
+            if (currentSelected?.id === id) {
+                return updatedSegments.find(seg => seg.id === id) || null;
+            }
+            return currentSelected;
+        });
+
+        return updatedSegments;
+    });
+  }, [design.id]);
 
   const handleDeleteSegment = (id: string) => {
     const updatedSegments = fieldSegments.filter(seg => seg.id !== id);

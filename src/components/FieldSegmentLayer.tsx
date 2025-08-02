@@ -14,6 +14,8 @@ interface FieldSegmentLayerProps {
   isRotating: boolean;
 }
 
+const FEET_PER_METER = 3.28084;
+
 const DraggableMarker: React.FC<{ position: any, onDrag: any }> = ({ position, onDrag }) => {
   return (
     <Marker
@@ -44,17 +46,35 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
 
   useEffect(() => {
     const area = calculatePolygonArea(segment.points, map);
+    let updates: Partial<FieldSegment> = {};
+    let hasChanged = false;
+
     if (memoizedLayout) {
       const { layout, count, nameplate, azimuth } = memoizedLayout;
-      onUpdate(segment.id, { area, moduleLayout: layout, moduleCount: count, nameplate, azimuth });
-    } else if (segment.moduleCount > 0 || segment.moduleLayout?.length) {
-      onUpdate(segment.id, { area, moduleLayout: [], moduleCount: 0, nameplate: 0 });
+      if (
+        Math.abs(area - segment.area) > 0.1 ||
+        count !== segment.moduleCount ||
+        nameplate !== segment.nameplate ||
+        azimuth !== segment.azimuth ||
+        JSON.stringify(layout) !== JSON.stringify(segment.moduleLayout)
+      ) {
+        updates = { area, moduleLayout: layout, moduleCount: count, nameplate, azimuth };
+        hasChanged = true;
+      }
+    } else if (segment.moduleCount > 0 || (segment.moduleLayout && segment.moduleLayout.length > 0)) {
+      updates = { area, moduleLayout: [], moduleCount: 0, nameplate: 0 };
+      hasChanged = true;
     } else {
       if (Math.abs(area - segment.area) > 0.1) {
-        onUpdate(segment.id, { area });
+        updates = { area };
+        hasChanged = true;
       }
     }
-  }, [segment.id, segment.points, segment.moduleCount, segment.moduleLayout, memoizedLayout, map, onUpdate]);
+
+    if (hasChanged) {
+      onUpdate(segment.id, updates);
+    }
+  }, [segment, map, onUpdate, memoizedLayout]);
 
   useEffect(() => {
     if (segment.setback && segment.setback > 0 && segment.points.length > 2) {
@@ -107,7 +127,6 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
   };
 
   const center = getPolygonCenter(segment.points);
-  const heightText = `Surface: ${segment.surfaceHeight || 0}m | Racking: ${segment.rackingHeight || 0}m`;
   const azimuthText = `Azimuth: ${segment.azimuth.toFixed(1)}°`;
 
   return (
@@ -146,12 +165,20 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
           icon={divIcon({
             className: 'leaflet-div-icon-transparent',
             html: `<div class="bg-white/80 backdrop-blur-sm p-2 rounded-md shadow text-xs text-center">
-                    <div>${heightText}</div>
                     <div>${azimuthText}</div>
                    </div>`
           })}
         />
       )}
+      {isSelected && segment.surfaceHeight && segment.surfaceHeight > 0 && segment.points.map((p, i) => {
+        const heightInFeet = segment.surfaceHeight! * FEET_PER_METER;
+        const heightIcon = divIcon({
+            className: 'leaflet-div-icon-transparent',
+            html: `<div class="bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-blue-600 font-bold text-xs shadow-lg">${heightInFeet.toFixed(1)} ft</div>`,
+            iconAnchor: [15, 35]
+        });
+        return <Marker key={`height-${i}`} position={p} icon={heightIcon} />;
+      })}
     </>
   );
 };
