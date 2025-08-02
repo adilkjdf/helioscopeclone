@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useMap, Polygon, Marker } from 'react-leaflet';
 import { FieldSegment, Module } from '../types/project';
-import { calculatePolygonArea, calculateModuleLayout } from '../utils/geometry';
-import { divIcon, LeafletEvent } from 'leaflet';
+import { calculatePolygonArea, calculateModuleLayout, calculateDistanceInFeet, getMidpoint } from '../utils/geometry';
+import { divIcon, LeafletEvent, LatLngTuple } from 'leaflet';
 
 interface FieldSegmentLayerProps {
   segment: FieldSegment;
@@ -50,6 +50,16 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
     onUpdate(segment.id, { points: newPoints });
   };
 
+  const renderLengthMarker = (p1: LatLngTuple, p2: LatLngTuple) => {
+    const length = calculateDistanceInFeet(p1, p2, map);
+    const midpoint = getMidpoint(p1, p2);
+    const icon = divIcon({
+      className: 'leaflet-div-icon-transparent',
+      html: `<div class="text-white text-sm font-bold" style="text-shadow: 0 0 3px black, 0 0 3px black;">${length.toFixed(1)} ft</div>`
+    });
+    return <Marker key={`length-${p1.toString()}-${p2.toString()}`} position={midpoint} icon={icon} />;
+  };
+
   return (
     <>
       <Polygon positions={segment.points} pathOptions={{ color: '#f97316', weight: 2, fillOpacity: 0.1 }} />
@@ -59,6 +69,10 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
       {segment.points.map((p, i) => (
         <DraggableMarker key={i} position={p} onDrag={(newLatLng: any) => handleMarkerDrag(i, newLatLng)} />
       ))}
+      {segment.points.map((p1, i) => {
+        const p2 = segment.points[(i + 1) % segment.points.length];
+        return renderLengthMarker(p1, p2);
+      })}
     </>
   );
 };
