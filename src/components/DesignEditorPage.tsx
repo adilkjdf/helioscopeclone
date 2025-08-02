@@ -82,7 +82,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
         description: `Field Segment ${fieldSegments.length + 1}`,
         rackingType: 'Fixed Tilt',
         moduleTilt: 10,
-        orientation: 'Landscape',
+        orientation: 'Portrait',
         rowSpacing: 2,
         moduleSpacing: 0.041,
         setback: 4,

@@ -80,7 +80,7 @@ export const calculateAdvancedModuleLayout = (
 ): { layout: LatLngTuple[][], count: number, nameplate: number, azimuth: number } => {
   const {
     points: polygon,
-    orientation = 'Landscape',
+    orientation = 'Portrait',
     azimuth: segmentAzimuth,
     rowSpacing = 2,
     moduleSpacing = 0.1,
@@ -131,8 +131,8 @@ export const calculateAdvancedModuleLayout = (
   const distancePixels = centerPx.distanceTo(eastPx);
   const pixelsPerMeter = distancePixels / distanceMeters;
 
-  const moduleWidth = orientation === 'Landscape' ? moduleHeightMeters : moduleWidthMeters;
-  const moduleHeight = orientation === 'Landscape' ? moduleWidthMeters : moduleHeightMeters;
+  const moduleWidth = orientation === 'Portrait' ? moduleWidthMeters : moduleHeightMeters;
+  const moduleHeight = orientation === 'Portrait' ? moduleHeightMeters : moduleWidthMeters;
 
   const moduleWidthPx = moduleWidth * pixelsPerMeter;
   const moduleHeightPx = moduleHeight * pixelsPerMeter;
@@ -175,25 +175,6 @@ export const calculateAdvancedModuleLayout = (
     const end_x = Math.min(top_intersections[top_intersections.length - 1], bottom_intersections[bottom_intersections.length - 1]);
 
     for (let x = start_x; x + moduleWidthPx <= end_x; x += stepX) {
-        const moduleCenter = new Point(x + moduleWidthPx / 2, y + moduleHeightPx / 2);
-
-        if (!isPointInPolygon(moduleCenter, rotatedPolygon)) {
-            continue;
-        }
-
-        let isTooClose = false;
-        for (let i = 0; i < rotatedPolygon.length; i++) {
-            const p1 = rotatedPolygon[i];
-            const p2 = rotatedPolygon[(i + 1) % rotatedPolygon.length];
-            if (pointToLineSegmentDistance(moduleCenter, p1, p2) < setbackPx) {
-                isTooClose = true;
-                break;
-            }
-        }
-        if (isTooClose) {
-            continue;
-        }
-
         const moduleCorners = [
             new Point(x, y),
             new Point(x + moduleWidthPx, y),
@@ -201,17 +182,40 @@ export const calculateAdvancedModuleLayout = (
             new Point(x, y + moduleHeightPx),
         ];
 
-        const cos_a = Math.cos(angle), sin_a = Math.sin(angle);
-        const originalPoints = moduleCorners.map(p => {
-            const rotatedX = p.x * cos_a - p.y * sin_a;
-            const rotatedY = p.x * sin_a + p.y * cos_a;
-            return new Point(rotatedX + origin.x, rotatedY + origin.y);
-        });
-        moduleLayout.push(originalPoints.map(p => {
-            const latLng = map.layerPointToLatLng(p);
-            return [latLng.lat, latLng.lng];
-        }));
-        count++;
+        let isModuleFullyValid = true;
+        for (const corner of moduleCorners) {
+            if (!isPointInPolygon(corner, rotatedPolygon)) {
+                isModuleFullyValid = false;
+                break;
+            }
+            let isCornerTooClose = false;
+            for (let i = 0; i < rotatedPolygon.length; i++) {
+                const p1 = rotatedPolygon[i];
+                const p2 = rotatedPolygon[(i + 1) % rotatedPolygon.length];
+                if (pointToLineSegmentDistance(corner, p1, p2) < setbackPx) {
+                    isCornerTooClose = true;
+                    break;
+                }
+            }
+            if (isCornerTooClose) {
+                isModuleFullyValid = false;
+                break;
+            }
+        }
+
+        if (isModuleFullyValid) {
+            const cos_a = Math.cos(angle), sin_a = Math.sin(angle);
+            const originalPoints = moduleCorners.map(p => {
+                const rotatedX = p.x * cos_a - p.y * sin_a;
+                const rotatedY = p.x * sin_a + p.y * cos_a;
+                return new Point(rotatedX + origin.x, rotatedY + origin.y);
+            });
+            moduleLayout.push(originalPoints.map(p => {
+                const latLng = map.layerPointToLatLng(p);
+                return [latLng.lat, latLng.lng];
+            }));
+            count++;
+        }
     }
   }
 
