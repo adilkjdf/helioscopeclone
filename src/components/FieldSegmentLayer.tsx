@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useMap, Polygon, Marker } from 'react-leaflet';
 import { FieldSegment, Module } from '../types/project';
 import { calculatePolygonArea, calculateModuleLayout } from '../utils/geometry';
-import { divIcon, DragEvent } from 'leaflet';
+import { divIcon, LeafletEvent } from 'leaflet';
 
 interface FieldSegmentLayerProps {
   segment: FieldSegment;
@@ -16,7 +16,7 @@ const DraggableMarker: React.FC<{ position: any, onDrag: any }> = ({ position, o
       position={position}
       draggable={true}
       eventHandlers={{
-        drag: (e: DragEvent) => onDrag(e.latlng),
+        drag: (e: LeafletEvent) => onDrag(e.target.getLatLng()),
       }}
       icon={divIcon({
         className: 'bg-orange-500 border-2 border-white rounded-full shadow-lg',
