@@ -7,7 +7,6 @@ import FieldSegmentLayer from './FieldSegmentLayer';
 import { ArrowLeft } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { LatLngTuple } from 'leaflet';
-import { calculatePolygonArea } from '../utils/geometry';
 import { supabase } from '../integrations/supabase/client';
 
 interface DesignEditorPageProps {
@@ -31,6 +30,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingPoints, setDrawingPoints] = useState<LatLngTuple[]>([]);
+  const [drawingArea, setDrawingArea] = useState(0);
   const [fieldSegments, setFieldSegments] = useState<FieldSegment[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
 
@@ -86,7 +86,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
         onStartDrawing={handleStartDrawing}
         onStopDrawing={handleStopDrawing}
         onClearDrawing={handleClearDrawing}
-        drawingArea={calculatePolygonArea(drawingPoints, useMap())}
+        drawingArea={drawingArea}
         modules={modules}
         fieldSegments={fieldSegments}
         onUpdateSegment={handleUpdateSegment}
@@ -104,7 +104,12 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
           <MapResizer isSidebarOpen={isSidebarOpen} />
           
           {isDrawing && (
-            <MapDrawingLayer points={drawingPoints} onPointsChange={setDrawingPoints} onShapeComplete={handleStopDrawing} />
+            <MapDrawingLayer 
+              points={drawingPoints} 
+              onPointsChange={setDrawingPoints} 
+              onShapeComplete={handleStopDrawing}
+              onAreaChange={setDrawingArea}
+            />
           )}
 
           {fieldSegments.map(segment => (

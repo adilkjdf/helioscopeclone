@@ -1,19 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useMap, Polygon, Polyline, CircleMarker, Marker } from 'react-leaflet';
 import { LatLngTuple, divIcon } from 'leaflet';
-import { calculateDistanceInFeet, getMidpoint, getSnappedPoint } from '../utils/geometry';
+import { calculateDistanceInFeet, getMidpoint, getSnappedPoint, calculatePolygonArea } from '../utils/geometry';
 
 interface MapDrawingLayerProps {
   points: LatLngTuple[];
   onPointsChange: (points: LatLngTuple[]) => void;
   onShapeComplete: () => void;
+  onAreaChange: (area: number) => void;
 }
 
-const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChange, onShapeComplete }) => {
+const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChange, onShapeComplete, onAreaChange }) => {
   const map = useMap();
   const [mousePos, setMousePos] = useState<LatLngTuple | null>(null);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
   const [isHoveringStartPoint, setIsHoveringStartPoint] = useState(false);
+
+  useEffect(() => {
+    const area = calculatePolygonArea(points, map);
+    onAreaChange(area);
+  }, [points, map, onAreaChange]);
 
   useEffect(() => {
     map.getContainer().style.cursor = 'crosshair';
