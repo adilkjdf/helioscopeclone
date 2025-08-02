@@ -1,4 +1,4 @@
-export type LngLatTuple = [number, number]; // [lng, lat]
+import { LatLngTuple } from 'leaflet';
 
 export interface Design {
   id: string;
@@ -71,12 +71,12 @@ export interface Module {
 
 export interface FieldSegment {
   id: string;
-  points: LngLatTuple[];
+  points: LatLngTuple[];
   area: number; // in sq feet
   nameplate: number; // in kW
   moduleCount: number;
   moduleId?: string;
-  moduleLayout?: LngLatTuple[][]; // Array of polygons for each module
+  moduleLayout?: LatLngTuple[][]; // Array of polygons for each module
   azimuth: number; // For orientation
   
   // New properties from image

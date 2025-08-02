@@ -1,8 +1,19 @@
 import React, { useRef, useState } from 'react';
-import { Map, Marker, MapRef } from 'react-map-gl';
-import { MapPin, Map as MapIcon, Satellite } from 'lucide-react';
-import maplibregl from 'maplibre-gl';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { Map as LeafletMap } from 'leaflet';
+import { MapPin, Map, Satellite } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
+// Fix for default markers in react-leaflet
+import L from 'leaflet';
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// NOTE: In a production app, this key should be stored in an environment variable.
 const MAPTILER_API_KEY = 'aTChQEvBqKVcP0AXd2bH';
 
 interface MapSectionProps {
@@ -12,18 +23,35 @@ interface MapSectionProps {
   onAddressGeocode: (address: string) => Promise<{ lat: number; lng: number } | null>;
 }
 
+interface MapEventHandlerProps {
+  onLocationSelect: (lat: number, lng: number) => void;
+}
+
+const MapEventHandler: React.FC<MapEventHandlerProps> = ({ onLocationSelect }) => {
+  useMapEvents({
+    click: (e) => {
+      const { lat, lng } = e.latlng;
+      onLocationSelect(lat, lng);
+    },
+  });
+  return null;
+};
+
 const MapSection: React.FC<MapSectionProps> = ({
   address,
   coordinates,
   onLocationSelect,
   onAddressGeocode
 }) => {
-  const [mapStyle, setMapStyle] = useState<'streets' | 'satellite'>('streets');
+  const [mapType, setMapType] = useState<'streets' | 'satellite'>('streets');
   const [isLoading, setIsLoading] = useState(false);
-  const mapRef = useRef<MapRef>(null);
+  const mapRef = useRef<LeafletMap>(null);
 
-  const defaultCenter = { lat: 37.7749, lng: -122.4194 };
-  const mapCenter = coordinates || defaultCenter;
+  // Default center (San Francisco Bay Area - good for solar projects)
+  const defaultCenter: [number, number] = [37.7749, -122.4194];
+  const mapCenter: [number, number] = coordinates 
+    ? [coordinates.lat, coordinates.lng] 
+    : defaultCenter;
 
   const handleCenterOnAddress = async () => {
     if (!address.trim()) return;
@@ -32,7 +60,7 @@ const MapSection: React.FC<MapSectionProps> = ({
     try {
       const location = await onAddressGeocode(address);
       if (location && mapRef.current) {
-        mapRef.current.flyTo({ center: [location.lng, location.lat], zoom: 16 });
+        mapRef.current.setView([location.lat, location.lng], 16);
         onLocationSelect(location.lat, location.lng);
       }
     } catch (error) {
@@ -42,9 +70,14 @@ const MapSection: React.FC<MapSectionProps> = ({
     }
   };
 
-  const getMapStyleUrl = () => {
-    const style = mapStyle === 'satellite' ? 'satellite' : 'streets-v2';
-    return `https://api.maptiler.com/maps/${style}/style.json?key=${MAPTILER_API_KEY}`;
+  const getTileLayerUrl = () => {
+    const style = mapType === 'satellite' ? 'satellite' : 'streets-v2';
+    const format = mapType === 'satellite' ? 'jpg' : 'png';
+    return `https://api.maptiler.com/maps/${style}/{z}/{x}/{y}.${format}?key=${MAPTILER_API_KEY}`;
+  };
+
+  const getTileLayerAttribution = () => {
+    return '&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors';
   };
 
   return (
@@ -57,20 +90,20 @@ const MapSection: React.FC<MapSectionProps> = ({
           </h3>
           <div className="flex bg-gray-100 rounded-lg p-1">
             <button
-              onClick={() => setMapStyle('streets')}
+              onClick={() => setMapType('streets')}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors flex items-center ${
-                mapStyle === 'streets'
+                mapType === 'streets'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <MapIcon className="w-4 h-4 mr-1" />
+              <Map className="w-4 h-4 mr-1" />
               Map
             </button>
             <button
-              onClick={() => setMapStyle('satellite')}
+              onClick={() => setMapType('satellite')}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors flex items-center ${
-                mapStyle === 'satellite'
+                mapType === 'satellite'
                   ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
@@ -97,22 +130,22 @@ const MapSection: React.FC<MapSectionProps> = ({
 
       <div className="relative">
         <div className="h-80 sm:h-96 relative z-0">
-          <Map
+          <MapContainer
+            center={mapCenter}
+            zoom={coordinates ? 16 : 10}
+            className="h-full w-full rounded-b-lg"
             ref={mapRef}
-            mapLib={maplibregl}
-            initialViewState={{
-              longitude: mapCenter.lng,
-              latitude: mapCenter.lat,
-              zoom: coordinates ? 16 : 10,
-            }}
-            style={{ width: '100%', height: '100%' }}
-            mapStyle={getMapStyleUrl()}
-            onClick={(e) => onLocationSelect(e.lngLat.lat, e.lngLat.lng)}
           >
+            <TileLayer
+              url={getTileLayerUrl()}
+              attribution={getTileLayerAttribution()}
+              key={mapType} // Re-renders the layer when map type changes
+            />
+            <MapEventHandler onLocationSelect={onLocationSelect} />
             {coordinates && (
-              <Marker longitude={coordinates.lng} latitude={coordinates.lat} />
+              <Marker position={[coordinates.lat, coordinates.lng]} />
             )}
-          </Map>
+          </MapContainer>
         </div>
         
         {coordinates && (

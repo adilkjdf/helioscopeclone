@@ -1,32 +1,40 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ProjectData, Design, FieldSegment, Module, LngLatTuple } from '../types/project';
-import { Map, MapProvider, useMap, Source, Layer, Marker } from 'react-map-gl';
+import { ProjectData, Design, FieldSegment, Module } from '../types/project';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import DesignEditorSidebar from './DesignEditorSidebar';
+import MapDrawingLayer from './MapDrawingLayer';
+import FieldSegmentLayer from './FieldSegmentLayer';
 import { ArrowLeft } from 'lucide-react';
-import maplibregl from 'maplibre-gl';
+import 'leaflet/dist/leaflet.css';
+import { LatLngTuple } from 'leaflet';
 import { supabase } from '../integrations/supabase/client';
-import { polygon as turfPolygon, area as turfArea } from '@turf/helpers';
-import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
+
+interface DesignEditorPageProps {
+  project: ProjectData;
+  design: Design;
+  onBack: () => void;
+}
 
 const MAPTILER_API_KEY = 'aTChQEvBqKVcP0AXd2bH';
 
-const DesignEditorPage: React.FC<{ project: ProjectData; design: Design; onBack: () => void; }> = ({ project, design, onBack }) => {
+const MapResizer: React.FC<{ isSidebarOpen: boolean }> = ({ isSidebarOpen }) => {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => { map.invalidateSize(); }, 300);
+    return () => clearTimeout(timer);
+  }, [isSidebarOpen, map]);
+  return null;
+};
+
+const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, onBack }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [drawingPoints, setDrawingPoints] = useState<LngLatTuple[]>([]);
+  const [drawingPoints, setDrawingPoints] = useState<LatLngTuple[]>([]);
+  const [drawingArea, setDrawingArea] = useState(0);
   const [fieldSegments, setFieldSegments] = useState<FieldSegment[]>([]);
-  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
+  const [selectedSegment, setSelectedSegment] = useState<FieldSegment | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [isRotating, setIsRotating] = useState(false);
-  const [viewState, setViewState] = useState({
-    longitude: project.coordinates?.lng || -122.4194,
-    latitude: project.coordinates?.lat || 37.7749,
-    zoom: 19,
-    pitch: 60,
-    bearing: 0,
-  });
-
-  const selectedSegment = fieldSegments.find(s => s.id === selectedSegmentId) || null;
 
   useEffect(() => {
     setFieldSegments(design.field_segments || []);
@@ -43,14 +51,14 @@ const DesignEditorPage: React.FC<{ project: ProjectData; design: Design; onBack:
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Control' && selectedSegmentId) setIsRotating(true);
-      if (e.key === 'Escape' && isDrawing) {
-        setIsDrawing(false);
-        setDrawingPoints([]);
+      if (e.key === 'Control' && selectedSegment) {
+        setIsRotating(true);
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Control') setIsRotating(false);
+      if (e.key === 'Control') {
+        setIsRotating(false);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -58,36 +66,90 @@ const DesignEditorPage: React.FC<{ project: ProjectData; design: Design; onBack:
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [selectedSegmentId, isDrawing]);
+  }, [selectedSegment]);
 
-  const saveFieldSegments = useCallback(async (segmentsToSave: FieldSegment[]) => {
+  const saveFieldSegments = async (segmentsToSave: FieldSegment[]) => {
     try {
       const { error } = await supabase
         .from('designs')
         .update({ field_segments: segmentsToSave, last_modified: new Date().toISOString() })
         .eq('id', design.id);
-      if (error) console.error('Error saving field segments:', error);
+
+      if (error) {
+        console.error('Error saving field segments:', error);
+      }
     } catch (error) {
       console.error('Failed to save field segments:', error);
     }
-  }, [design.id]);
+  };
+
+  const handleStartDrawing = () => {
+    setIsDrawing(true);
+    setSelectedSegment(null);
+    setDrawingPoints([]);
+  };
+
+  const handleStopDrawing = () => {
+    setIsDrawing(false);
+    if (drawingPoints.length > 2) {
+      const newSegment: FieldSegment = {
+        id: new Date().toISOString(),
+        points: drawingPoints,
+        area: 0,
+        nameplate: 0,
+        moduleCount: 0,
+        azimuth: 180,
+        description: `Field Segment ${fieldSegments.length + 1}`,
+        rackingType: 'Fixed Tilt',
+        moduleTilt: 10,
+        orientation: 'Portrait',
+        rowSpacing: 2,
+        moduleSpacing: 0.041,
+        setback: 0,
+        surfaceHeight: 0,
+        rackingHeight: 0,
+        frameSizeUp: 1,
+        frameSizeWide: 1,
+        frameSpacing: 0,
+        spanRise: 0,
+        alignment: 'center',
+      };
+      const updatedSegments = [...fieldSegments, newSegment];
+      setFieldSegments(updatedSegments);
+      saveFieldSegments(updatedSegments);
+      setSelectedSegment(newSegment);
+    }
+    setDrawingPoints([]);
+  };
+
+  const handleClearDrawing = () => setDrawingPoints([]);
 
   const handleUpdateSegment = useCallback((id: string, updates: Partial<FieldSegment>) => {
     setFieldSegments(currentSegments => {
-      const updatedSegments = currentSegments.map(seg => seg.id === id ? { ...seg, ...updates } : seg);
-      saveFieldSegments(updatedSegments);
-      return updatedSegments;
+        const updatedSegments = currentSegments.map(seg => seg.id === id ? { ...seg, ...updates } : seg);
+        saveFieldSegments(updatedSegments);
+        
+        setSelectedSegment(currentSelected => {
+            if (currentSelected?.id === id) {
+                return updatedSegments.find(seg => seg.id === id) || null;
+            }
+            return currentSelected;
+        });
+
+        return updatedSegments;
     });
-  }, [saveFieldSegments]);
+  }, [design.id]);
 
   const handleDeleteSegment = (id: string) => {
     const updatedSegments = fieldSegments.filter(seg => seg.id !== id);
     setFieldSegments(updatedSegments);
     saveFieldSegments(updatedSegments);
-    if (selectedSegmentId === id) {
-      setSelectedSegmentId(null);
+    if (selectedSegment?.id === id) {
+      setSelectedSegment(null);
     }
   };
+
+  const mapCenter: [number, number] = project.coordinates ? [project.coordinates.lat, project.coordinates.lng] : [37.7749, -122.4194];
 
   return (
     <div className="flex h-full w-full bg-gray-100">
@@ -96,14 +158,14 @@ const DesignEditorPage: React.FC<{ project: ProjectData; design: Design; onBack:
         isOpen={isSidebarOpen}
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isDrawing={isDrawing}
-        onStartDrawing={() => { setIsDrawing(true); setSelectedSegmentId(null); setDrawingPoints([]); }}
-        onStopDrawing={() => { setIsDrawing(false); setDrawingPoints([]); }}
-        onClearDrawing={() => setDrawingPoints([])}
-        drawingArea={0} // Simplified for now
+        onStartDrawing={handleStartDrawing}
+        onStopDrawing={handleStopDrawing}
+        onClearDrawing={handleClearDrawing}
+        drawingArea={drawingArea}
         modules={modules}
         fieldSegments={fieldSegments}
         selectedSegment={selectedSegment}
-        onSelectSegment={(segment) => setSelectedSegmentId(segment?.id || null)}
+        onSelectSegment={setSelectedSegment}
         onUpdateSegment={handleUpdateSegment}
         onDeleteSegment={handleDeleteSegment}
       />
@@ -114,24 +176,31 @@ const DesignEditorPage: React.FC<{ project: ProjectData; design: Design; onBack:
             <span>Back to Project</span>
           </button>
         </div>
-        <MapProvider>
-          <Map
-            {...viewState}
-            onMove={evt => setViewState(evt.viewState)}
-            mapLib={maplibregl}
-            style={{ width: '100%', height: '100%' }}
-            mapStyle={`https://api.maptiler.com/maps/satellite/style.json?key=${MAPTILER_API_KEY}`}
-            maxPitch={85}
-            cursor={isDrawing ? 'crosshair' : 'grab'}
-            onClick={(e) => {
-              if (!isDrawing) return;
-              const newPoint: LngLatTuple = [e.lngLat.lng, e.lngLat.lat];
-              setDrawingPoints([...drawingPoints, newPoint]);
-            }}
-          >
-            {/* All map-related components go here */}
-          </Map>
-        </MapProvider>
+        <MapContainer center={mapCenter} zoom={19} maxZoom={24} className="h-full w-full" scrollWheelZoom={true} doubleClickZoom={false}>
+          <TileLayer url={`https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_API_KEY}`} attribution='&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors' maxNativeZoom={20} maxZoom={24} />
+          <MapResizer isSidebarOpen={isSidebarOpen} />
+          
+          {isDrawing && (
+            <MapDrawingLayer 
+              points={drawingPoints} 
+              onPointsChange={setDrawingPoints} 
+              onShapeComplete={handleStopDrawing}
+              onAreaChange={setDrawingArea}
+            />
+          )}
+
+          {fieldSegments.map(segment => (
+            <FieldSegmentLayer 
+              key={segment.id} 
+              segment={segment} 
+              modules={modules} 
+              onUpdate={handleUpdateSegment}
+              onSelect={() => setSelectedSegment(segment)}
+              isSelected={selectedSegment?.id === segment.id}
+              isRotating={isRotating && selectedSegment?.id === segment.id}
+            />
+          ))}
+        </MapContainer>
       </div>
     </div>
   );
