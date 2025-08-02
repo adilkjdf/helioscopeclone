@@ -65,7 +65,6 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
   }
 
   if (selectedSegment) {
-    const selectedModule = modules.find(m => m.id === selectedSegment.moduleId);
     return (
       <aside className="w-96 bg-white border-r shadow-lg flex flex-col h-screen">
         <div className="p-4 border-b flex-shrink-0">
@@ -85,19 +84,24 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
         <div className="flex-grow p-4 overflow-y-auto space-y-4 text-sm">
           <FormField label="Description" id="seg-desc" value={selectedSegment.description || ''} onChange={val => onUpdateSegment(selectedSegment.id, { description: val })} />
           <SelectField label="Module" id="seg-module" value={selectedSegment.moduleId || ''} onChange={val => onUpdateSegment(selectedSegment.id, { moduleId: val })} options={moduleOptions} />
-          <SelectField label="Racking" id="seg-racking" value={selectedSegment.rackingType || ''} onChange={val => onUpdateSegment(selectedSegment.id, { rackingType: val as any })} options={rackingOptions} />
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Module Azimuth" id="seg-azimuth" type="number" value={selectedSegment.azimuth} onChange={val => onUpdateSegment(selectedSegment.id, { azimuth: parseFloat(val) })} />
-            <FormField label="Module Tilt" id="seg-tilt" type="number" value={selectedSegment.moduleTilt || 0} onChange={val => onUpdateSegment(selectedSegment.id, { moduleTilt: parseFloat(val) })} />
-          </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold mb-2 text-gray-700">Automatic Layout Rules</h4>
-            <SelectField label="Default Orientation" id="seg-orientation" value={selectedSegment.orientation || ''} onChange={val => onUpdateSegment(selectedSegment.id, { orientation: val as any })} options={orientationOptions} />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Row Spacing (ft)" id="seg-row-spacing" type="number" value={selectedSegment.rowSpacing || 0} onChange={val => onUpdateSegment(selectedSegment.id, { rowSpacing: parseFloat(val) })} />
-              <FormField label="Module Spacing (ft)" id="seg-module-spacing" type="number" value={selectedSegment.moduleSpacing || 0} step={0.01} onChange={val => onUpdateSegment(selectedSegment.id, { moduleSpacing: parseFloat(val) })} />
-            </div>
-          </div>
+          
+          {selectedSegment.moduleId && (
+            <>
+              <SelectField label="Racking" id="seg-racking" value={selectedSegment.rackingType || ''} onChange={val => onUpdateSegment(selectedSegment.id, { rackingType: val as any })} options={rackingOptions} />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Module Azimuth" id="seg-azimuth" type="number" value={selectedSegment.azimuth} onChange={val => onUpdateSegment(selectedSegment.id, { azimuth: parseFloat(val) })} />
+                <FormField label="Module Tilt" id="seg-tilt" type="number" value={selectedSegment.moduleTilt || 0} onChange={val => onUpdateSegment(selectedSegment.id, { moduleTilt: parseFloat(val) })} />
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold mb-2 text-gray-700">Automatic Layout Rules</h4>
+                <SelectField label="Default Orientation" id="seg-orientation" value={selectedSegment.orientation || ''} onChange={val => onUpdateSegment(selectedSegment.id, { orientation: val as any })} options={orientationOptions} />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField label="Row Spacing (ft)" id="seg-row-spacing" type="number" value={selectedSegment.rowSpacing || 0} onChange={val => onUpdateSegment(selectedSegment.id, { rowSpacing: parseFloat(val) })} />
+                  <FormField label="Module Spacing (ft)" id="seg-module-spacing" type="number" value={selectedSegment.moduleSpacing || 0} step={0.01} onChange={val => onUpdateSegment(selectedSegment.id, { moduleSpacing: parseFloat(val) })} />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </aside>
     );
