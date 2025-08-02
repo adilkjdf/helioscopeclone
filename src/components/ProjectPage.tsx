@@ -21,11 +21,12 @@ const MAPTILER_API_KEY = 'aTChQEvBqKVcP0AXd2bH';
 interface ProjectPageProps {
   project: ProjectData;
   onBack: () => void;
+  onSelectDesign: (design: Design) => void;
 }
 
 type TabType = 'designs' | 'conditions' | 'shading' | 'sharing' | 'reports';
 
-const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack }) => {
+const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesign }) => {
   const [activeTab, setActiveTab] = useState<TabType>('designs');
   const [designs, setDesigns] = useState<Design[]>([]);
   const [isNewDesignModalOpen, setIsNewDesignModalOpen] = useState(false);
@@ -155,7 +156,9 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack }) => {
                   <div key={design.id} className="p-6 border-b last:border-b-0">
                     <div className="grid grid-cols-5 gap-4 items-center">
                       <div>
-                        <a href="#" className="text-blue-600 hover:text-blue-800 font-medium">{design.name}</a>
+                        <button onClick={() => onSelectDesign(design)} className="text-blue-600 hover:text-blue-800 font-medium text-left">
+                          {design.name}
+                        </button>
                       </div>
                       <div className="text-sm text-gray-600">
                         {design.lastModified.toLocaleDateString()}

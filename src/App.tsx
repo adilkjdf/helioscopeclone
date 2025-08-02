@@ -5,16 +5,18 @@ import ProjectOnboarding from './components/ProjectOnboarding';
 import ProjectPage from './components/ProjectPage';
 import ModulesPage from './components/Library/ModulesPage';
 import InvertersPage from './components/Library/InvertersPage';
-import { ProjectData, Module } from './types/project';
+import DesignEditorPage from './components/DesignEditorPage';
+import { ProjectData, Module, Design } from './types/project';
 import { supabase } from './integrations/supabase/client';
 
-type View = 'dashboard' | 'project' | 'library_modules' | 'library_inverters';
+type View = 'dashboard' | 'project' | 'library_modules' | 'library_inverters' | 'design_editor';
 
 function App() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [currentProject, setCurrentProject] = useState<ProjectData | null>(null);
+  const [currentDesign, setCurrentDesign] = useState<Design | null>(null);
   const [currentView, setCurrentView] = useState<View>('dashboard');
 
   useEffect(() => {
@@ -55,8 +57,11 @@ function App() {
 
   const handleNavigate = (view: View) => {
     setCurrentView(view);
-    if (view !== 'project') {
+    if (view !== 'project' && view !== 'design_editor') {
       setCurrentProject(null);
+    }
+    if (view !== 'design_editor') {
+      setCurrentDesign(null);
     }
   };
 
@@ -108,6 +113,11 @@ function App() {
     setCurrentView('project');
   };
 
+  const handleSelectDesign = (design: Design) => {
+    setCurrentDesign(design);
+    setCurrentView('design_editor');
+  };
+
   const handleDeleteProject = async (projectId: string) => {
     // eslint-disable-next-line no-restricted-globals
     if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
@@ -130,6 +140,12 @@ function App() {
   const handleBackToDashboard = () => {
     setCurrentView('dashboard');
     setCurrentProject(null);
+    setCurrentDesign(null);
+  };
+
+  const handleBackToProject = () => {
+    setCurrentView('project');
+    setCurrentDesign(null);
   };
 
   const handleSaveModule = async (moduleData: Module) => {
@@ -166,7 +182,11 @@ function App() {
                   isLoading={isLoadingProjects}
                 />;
       case 'project':
-        return currentProject ? <ProjectPage project={currentProject} onBack={handleBackToDashboard} /> : <DashboardHome onCreateProject={handleCreateProject} projects={[]} onSelectProject={handleSelectProject} onDeleteProject={handleDeleteProject} isLoading={true} />;
+        return currentProject ? <ProjectPage project={currentProject} onBack={handleBackToDashboard} onSelectDesign={handleSelectDesign} /> : <DashboardHome onCreateProject={handleCreateProject} projects={[]} onSelectProject={handleSelectProject} onDeleteProject={handleDeleteProject} isLoading={true} />;
+      case 'design_editor':
+        return currentProject && currentDesign 
+          ? <DesignEditorPage project={currentProject} design={currentDesign} onBack={handleBackToProject} /> 
+          : <ProjectPage project={currentProject!} onBack={handleBackToDashboard} onSelectDesign={handleSelectDesign} />;
       case 'library_modules':
         return <ModulesPage onSaveModule={handleSaveModule} />;
       case 'library_inverters':
@@ -178,8 +198,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header onNavigate={handleNavigate} />
-      <main>
+      {currentView !== 'design_editor' && <Header onNavigate={handleNavigate} />}
+      <main className={currentView === 'design_editor' ? 'h-screen' : ''}>
         {renderCurrentView()}
         <ProjectOnboarding
           isOpen={isOnboardingOpen}
