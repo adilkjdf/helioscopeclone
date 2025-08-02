@@ -105,10 +105,18 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
         eventHandlers={{ click: onSelect }}
       />
       {insetPolygon.length > 0 && (
-        <Polygon 
-          positions={[segment.points, insetPolygon]}
-          pathOptions={{ color: 'transparent', weight: 0, fillColor: '#a7f3d0', fillOpacity: 0.5 }}
-        />
+        <>
+          {/* Setback area (light green) */}
+          <Polygon 
+            positions={[segment.points, insetPolygon]}
+            pathOptions={{ color: 'transparent', weight: 0, fillColor: '#a7f3d0', fillOpacity: 0.5 }}
+          />
+          {/* Placeable area background (orange) */}
+          <Polygon
+            positions={insetPolygon}
+            pathOptions={{ color: 'transparent', weight: 0, fillColor: '#f97316', fillOpacity: 0.2 }}
+          />
+        </>
       )}
       {segment.moduleLayout?.map((modulePolygon, i) => (
         <Polygon key={i} positions={modulePolygon} pathOptions={{ color: 'white', weight: 1, fillColor: '#3b82f6', fillOpacity: 0.8 }} />
