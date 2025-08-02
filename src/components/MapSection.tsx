@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import { Map as LeafletMap } from 'leaflet';
 import { MapPin, Map, Satellite } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
 // Fix for default markers in react-leaflet
 import L from 'leaflet';

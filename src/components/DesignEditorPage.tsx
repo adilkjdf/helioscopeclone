@@ -3,6 +3,7 @@ import { ProjectData, Design } from '../types/project';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import DesignEditorSidebar from './DesignEditorSidebar';
 import { ArrowLeft } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
 interface DesignEditorPageProps {
   project: ProjectData;
@@ -40,7 +41,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
         <MapContainer
           center={mapCenter}
           zoom={19}
-          maxZoom={22}
+          maxZoom={24}
           className="h-full w-full"
           scrollWheelZoom={true}
         >
