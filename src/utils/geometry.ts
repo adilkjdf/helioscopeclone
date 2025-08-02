@@ -107,7 +107,9 @@ export const calculateInsetPolygon = (points: LatLngTuple[], setbackFeet: number
 
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
-        const normal = new Point(-dy, dx).normalize();
+        const normalVec = new Point(-dy, dx);
+        const dist = normalVec.distanceTo(new Point(0,0));
+        const normal = dist > 0 ? normalVec.divideBy(dist) : new Point(0,0);
 
         const testPoint = p1.add(normal);
         if (!isPointInPolygon(testPoint, containerPoints)) {
