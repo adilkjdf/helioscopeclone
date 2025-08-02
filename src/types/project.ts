@@ -49,6 +49,23 @@ export interface Module {
   isc?: number;
   vmp?: number;
   imp?: number;
+  n_cells_in_series?: number;
+  n_cells_in_parallel?: number;
+  n_diodes?: number;
+  p_nom_tol_low?: number;
+  p_nom_tol_up?: number;
+  mu_isc?: number;
+  mu_voc_spec?: number;
+  mu_pmp_req?: number;
+  gamma_ref?: number;
+  mu_gamma?: number;
+  r_s?: number;
+  r_sh_ref?: number;
+  r_sh_0?: number;
+  r_sh_exp?: number;
+  i_l_ref?: number;
+  i_o_ref?: number;
+  data_source?: string;
 }
 
 export interface FieldSegment {

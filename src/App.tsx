@@ -162,6 +162,23 @@ function App() {
         isc: moduleData.isc,
         vmp: moduleData.vmp,
         imp: moduleData.imp,
+        n_cells_in_series: moduleData.n_cells_in_series,
+        n_cells_in_parallel: moduleData.n_cells_in_parallel,
+        n_diodes: moduleData.n_diodes,
+        p_nom_tol_low: moduleData.p_nom_tol_low,
+        p_nom_tol_up: moduleData.p_nom_tol_up,
+        mu_isc: moduleData.mu_isc,
+        mu_voc_spec: moduleData.mu_voc_spec,
+        mu_pmp_req: moduleData.mu_pmp_req,
+        gamma_ref: moduleData.gamma_ref,
+        mu_gamma: moduleData.mu_gamma,
+        r_s: moduleData.r_s,
+        r_sh_ref: moduleData.r_sh_ref,
+        r_sh_0: moduleData.r_sh_0,
+        r_sh_exp: moduleData.r_sh_exp,
+        i_l_ref: moduleData.i_l_ref,
+        i_o_ref: moduleData.i_o_ref,
+        data_source: moduleData.data_source,
       });
 
       if (error) {
