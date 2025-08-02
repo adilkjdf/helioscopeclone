@@ -64,6 +64,15 @@ const isPointInPolygon = (point: Point, polygon: Point[]): boolean => {
     return isInside;
 };
 
+const pointToLineSegmentDistance = (p: Point, a: Point, b: Point): number => {
+    const l2 = a.distanceTo(b) ** 2;
+    if (l2 === 0) return p.distanceTo(a);
+    let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    const projection = new Point(a.x + t * (b.x - a.x), a.y + t * (b.y - a.y));
+    return p.distanceTo(projection);
+};
+
 export const calculateAdvancedModuleLayout = (
   segment: FieldSegment,
   module: Module,
@@ -75,6 +84,7 @@ export const calculateAdvancedModuleLayout = (
     azimuth: segmentAzimuth,
     rowSpacing = 2,
     moduleSpacing = 0.1,
+    setback = 4,
   } = segment;
 
   const { width: moduleWidthMeters, height: moduleHeightMeters, max_power_pmp: modulePower } = module;
@@ -128,6 +138,7 @@ export const calculateAdvancedModuleLayout = (
   const moduleHeightPx = moduleHeight * pixelsPerMeter;
   const rowSpacingPx = (rowSpacing / FEET_PER_METER) * pixelsPerMeter;
   const moduleSpacingPx = (moduleSpacing / FEET_PER_METER) * pixelsPerMeter;
+  const setbackPx = (setback / FEET_PER_METER) * pixelsPerMeter;
 
   const stepX = moduleWidthPx + moduleSpacingPx;
   const stepY = moduleHeightPx + rowSpacingPx;
@@ -164,17 +175,31 @@ export const calculateAdvancedModuleLayout = (
     const end_x = Math.min(top_intersections[top_intersections.length - 1], bottom_intersections[bottom_intersections.length - 1]);
 
     for (let x = start_x; x + moduleWidthPx <= end_x; x += stepX) {
+        const moduleCenter = new Point(x + moduleWidthPx / 2, y + moduleHeightPx / 2);
+
+        if (!isPointInPolygon(moduleCenter, rotatedPolygon)) {
+            continue;
+        }
+
+        let isTooClose = false;
+        for (let i = 0; i < rotatedPolygon.length; i++) {
+            const p1 = rotatedPolygon[i];
+            const p2 = rotatedPolygon[(i + 1) % rotatedPolygon.length];
+            if (pointToLineSegmentDistance(moduleCenter, p1, p2) < setbackPx) {
+                isTooClose = true;
+                break;
+            }
+        }
+        if (isTooClose) {
+            continue;
+        }
+
         const moduleCorners = [
             new Point(x, y),
             new Point(x + moduleWidthPx, y),
             new Point(x + moduleWidthPx, y + moduleHeightPx),
             new Point(x, y + moduleHeightPx),
         ];
-
-        const moduleCenter = new Point(x + moduleWidthPx / 2, y + moduleHeightPx / 2);
-        if (!isPointInPolygon(moduleCenter, rotatedPolygon)) {
-            continue;
-        }
 
         const cos_a = Math.cos(angle), sin_a = Math.sin(angle);
         const originalPoints = moduleCorners.map(p => {
