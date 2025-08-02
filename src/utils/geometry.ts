@@ -135,30 +135,58 @@ export const calculateAdvancedModuleLayout = (
   const moduleLayout: LatLngTuple[][] = [];
   let count = 0;
 
+  const getIntersections = (y: number, poly: Point[]): number[] => {
+    const intersections: number[] = [];
+    for (let i = 0; i < poly.length; i++) {
+        const p1 = poly[i];
+        const p2 = poly[(i + 1) % poly.length];
+        if (p1.y === p2.y) continue;
+        if (Math.min(p1.y, p2.y) <= y && Math.max(p1.y, p2.y) > y) {
+            const x = (y - p1.y) * (p2.x - p1.x) / (p2.y - p1.y) + p1.x;
+            intersections.push(x);
+        }
+    }
+    return intersections.sort((a, b) => a - b);
+  };
+
   for (let y = rotatedBounds.min!.y; y < rotatedBounds.max!.y; y += stepY) {
-    for (let x = rotatedBounds.min!.x; x < rotatedBounds.max!.x; x += stepX) {
-      const moduleCorners = [
-        new Point(x, y),
-        new Point(x + moduleWidthPx, y),
-        new Point(x + moduleWidthPx, y + moduleHeightPx),
-        new Point(x, y + moduleHeightPx),
-      ];
+    const y_bottom = y + moduleHeightPx;
+    if (y_bottom > rotatedBounds.max!.y) continue;
 
-      const allCornersIn = moduleCorners.every(corner => isPointInPolygon(corner, rotatedPolygon));
+    const top_intersections = getIntersections(y, rotatedPolygon);
+    const bottom_intersections = getIntersections(y_bottom, rotatedPolygon);
 
-      if (allCornersIn) {
+    if (top_intersections.length < 2 || bottom_intersections.length < 2) {
+        continue;
+    }
+    
+    const start_x = Math.max(top_intersections[0], bottom_intersections[0]);
+    const end_x = Math.min(top_intersections[top_intersections.length - 1], bottom_intersections[bottom_intersections.length - 1]);
+
+    for (let x = start_x; x + moduleWidthPx <= end_x; x += stepX) {
+        const moduleCorners = [
+            new Point(x, y),
+            new Point(x + moduleWidthPx, y),
+            new Point(x + moduleWidthPx, y + moduleHeightPx),
+            new Point(x, y + moduleHeightPx),
+        ];
+
+        const moduleCenter = new Point(x + moduleWidthPx / 2, y + moduleHeightPx / 2);
+        if (!isPointInPolygon(moduleCenter, rotatedPolygon)) {
+            continue;
+        }
+
         const cos_a = Math.cos(angle), sin_a = Math.sin(angle);
         const originalPoints = moduleCorners.map(p => {
-          const rotatedX = p.x * cos_a - p.y * sin_a;
-          const rotatedY = p.x * sin_a + p.y * cos_a;
-          return new Point(rotatedX + origin.x, rotatedY + origin.y);
+            const rotatedX = p.x * cos_a - p.y * sin_a;
+            const rotatedY = p.x * sin_a + p.y * cos_a;
+            return new Point(rotatedX + origin.x, rotatedY + origin.y);
         });
         moduleLayout.push(originalPoints.map(p => {
-          const latLng = map.layerPointToLatLng(p);
-          return [latLng.lat, latLng.lng];
+            const latLng = map.layerPointToLatLng(p);
+            return [latLng.lat, latLng.lng];
         }));
         count++;
-      }
     }
   }
 
