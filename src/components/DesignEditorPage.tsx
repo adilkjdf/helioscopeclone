@@ -85,12 +85,13 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
         orientation: 'Portrait',
         rowSpacing: 2,
         moduleSpacing: 0.041,
-        setback: 4,
+        setback: 0,
         surfaceHeight: 0,
         rackingHeight: 0,
         frameSizeUp: 1,
         frameSizeWide: 1,
         frameSpacing: 0,
+        spanRise: 0,
         alignment: 'center',
       };
       const updatedSegments = [...fieldSegments, newSegment];

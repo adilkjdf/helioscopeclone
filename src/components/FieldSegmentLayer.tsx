@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMap, Polygon, Marker } from 'react-leaflet';
 import { FieldSegment, Module } from '../types/project';
-import { calculatePolygonArea, calculateAdvancedModuleLayout, calculateDistanceInFeet, getMidpoint } from '../utils/geometry';
-import { divIcon, LeafletEvent, LatLngTuple } from 'leaflet';
+import { calculatePolygonArea, calculateAdvancedModuleLayout, calculateDistanceInFeet, getMidpoint, calculateInsetPolygon, isPointInPolygon } from '../utils/geometry';
+import { divIcon, LeafletEvent, LatLngTuple, Point, latLng } from 'leaflet';
 
 interface FieldSegmentLayerProps {
   segment: FieldSegment;
@@ -29,6 +29,7 @@ const DraggableMarker: React.FC<{ position: any, onDrag: any }> = ({ position, o
 
 const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules, onUpdate, onSelect }) => {
   const map = useMap();
+  const [insetPolygon, setInsetPolygon] = useState<LatLngTuple[]>([]);
 
   useEffect(() => {
     const area = calculatePolygonArea(segment.points, map);
@@ -46,29 +47,66 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
     }
   }, [segment, modules, map, onUpdate]);
 
+  useEffect(() => {
+    if (segment.setback && segment.setback > 0 && segment.points.length > 2) {
+      const inset = calculateInsetPolygon(segment.points, segment.setback, map);
+      setInsetPolygon(inset);
+    } else {
+      setInsetPolygon([]);
+    }
+  }, [segment.points, segment.setback, map]);
+
   const handleMarkerDrag = (index: number, newLatLng: { lat: number, lng: number }) => {
     const newPoints = [...segment.points];
     newPoints[index] = [newLatLng.lat, newLatLng.lng];
     onUpdate(segment.id, { points: newPoints });
   };
 
-  const renderLengthMarker = (p1: LatLngTuple, p2: LatLngTuple) => {
+  const renderLengthMarker = (p1: LatLngTuple, p2: LatLngTuple, polygonPoints: LatLngTuple[]) => {
     const length = calculateDistanceInFeet(p1, p2, map);
-    const midpoint = getMidpoint(p1, p2);
+    const midpointLatLng = getMidpoint(p1, p2);
+
+    const p1_container = map.latLngToContainerPoint(p1);
+    const p2_container = map.latLngToContainerPoint(p2);
+    const midpoint_container = map.latLngToContainerPoint(midpointLatLng);
+
+    const dx = p2_container.x - p1_container.x;
+    const dy = p2_container.y - p1_container.y;
+
+    const normal = new Point(-dy, dx).normalize();
+    const offset = 20;
+    
+    let offsetPoint = midpoint_container.add(normal.multiplyBy(offset));
+
+    if (polygonPoints.length > 2) {
+        const polygonContainerPoints = polygonPoints.map(p => map.latLngToContainerPoint(latLng(p)));
+        if (isPointInPolygon(offsetPoint, polygonContainerPoints)) {
+            offsetPoint = midpoint_container.subtract(normal.multiplyBy(offset));
+        }
+    }
+
+    const finalPosition = map.containerPointToLatLng(offsetPoint);
+
     const icon = divIcon({
-      className: 'leaflet-div-icon-transparent',
-      html: `<div class="text-white text-sm font-bold" style="text-shadow: 0 0 3px black, 0 0 3px black;">${length.toFixed(1)} ft</div>`
+        className: 'leaflet-div-icon-transparent',
+        html: `<div class="text-white text-sm font-bold" style="text-shadow: 0 0 3px black, 0 0 3px black;">${length.toFixed(1)} ft</div>`
     });
-    return <Marker key={`length-${p1.toString()}-${p2.toString()}`} position={midpoint} icon={icon} />;
+    return <Marker key={`length-${p1.toString()}-${p2.toString()}`} position={finalPosition} icon={icon} />;
   };
 
   return (
     <>
       <Polygon 
         positions={segment.points} 
-        pathOptions={{ color: '#ca8a04', weight: 2, fillColor: '#fde047', fillOpacity: 0.3 }} 
+        pathOptions={{ color: '#ca8a04', weight: 2, fill: false }} 
         eventHandlers={{ click: onSelect }}
       />
+      {insetPolygon.length > 0 && (
+        <Polygon 
+          positions={[segment.points, insetPolygon]}
+          pathOptions={{ color: 'transparent', weight: 0, fillColor: '#a7f3d0', fillOpacity: 0.5 }}
+        />
+      )}
       {segment.moduleLayout?.map((modulePolygon, i) => (
         <Polygon key={i} positions={modulePolygon} pathOptions={{ color: 'white', weight: 1, fillColor: '#3b82f6', fillOpacity: 0.8 }} />
       ))}
@@ -77,7 +115,7 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
       ))}
       {segment.points.map((p1, i) => {
         const p2 = segment.points[(i + 1) % segment.points.length];
-        return renderLengthMarker(p1, p2);
+        return renderLengthMarker(p1, p2, segment.points);
       })}
     </>
   );

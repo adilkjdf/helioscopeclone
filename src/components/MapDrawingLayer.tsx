@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useMap, Polygon, Polyline, CircleMarker, Marker } from 'react-leaflet';
-import { LatLngTuple, divIcon } from 'leaflet';
-import { calculateDistanceInFeet, getMidpoint, getSnappedPoint, calculatePolygonArea } from '../utils/geometry';
+import { LatLngTuple, divIcon, Point, latLng } from 'leaflet';
+import { calculateDistanceInFeet, getMidpoint, getSnappedPoint, calculatePolygonArea, isPointInPolygon } from '../utils/geometry';
 
 interface MapDrawingLayerProps {
   points: LatLngTuple[];
@@ -74,14 +74,36 @@ const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChang
     ghostLinePoints.push(lastPoint, dynamicPoint);
   }
 
-  const renderMarkerForSegment = (p1: LatLngTuple, p2: LatLngTuple) => {
+  const renderMarkerForSegment = (p1: LatLngTuple, p2: LatLngTuple, polygonPoints: LatLngTuple[]) => {
     const length = calculateDistanceInFeet(p1, p2, map);
-    const midpoint = getMidpoint(p1, p2);
+    const midpointLatLng = getMidpoint(p1, p2);
+
+    const p1_container = map.latLngToContainerPoint(p1);
+    const p2_container = map.latLngToContainerPoint(p2);
+    const midpoint_container = map.latLngToContainerPoint(midpointLatLng);
+
+    const dx = p2_container.x - p1_container.x;
+    const dy = p2_container.y - p1_container.y;
+
+    const normal = new Point(-dy, dx).normalize();
+    const offset = 20;
+    
+    let offsetPoint = midpoint_container.add(normal.multiplyBy(offset));
+
+    if (polygonPoints.length > 2) {
+        const polygonContainerPoints = polygonPoints.map(p => map.latLngToContainerPoint(latLng(p)));
+        if (isPointInPolygon(offsetPoint, polygonContainerPoints)) {
+            offsetPoint = midpoint_container.subtract(normal.multiplyBy(offset));
+        }
+    }
+
+    const finalPosition = map.containerPointToLatLng(offsetPoint);
+
     const icon = divIcon({
         className: 'leaflet-div-icon-transparent',
         html: `<div class="text-white text-sm font-bold" style="text-shadow: 0 0 3px black, 0 0 3px black;">${length.toFixed(1)} ft</div>`
     });
-    return <Marker key={`${p1.toString()}-${p2.toString()}`} position={midpoint} icon={icon} />;
+    return <Marker key={`${p1.toString()}-${p2.toString()}`} position={finalPosition} icon={icon} />;
   };
 
   return (
@@ -110,8 +132,8 @@ const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChang
           } : {}}
         />
       ))}
-      {points.slice(0, -1).map((p, i) => renderMarkerForSegment(p, points[i+1]))}
-      {ghostLinePoints.length === 2 && renderMarkerForSegment(ghostLinePoints[0], ghostLinePoints[1])}
+      {points.slice(0, -1).map((p, i) => renderMarkerForSegment(p, points[i+1], points))}
+      {ghostLinePoints.length === 2 && renderMarkerForSegment(ghostLinePoints[0], ghostLinePoints[1], points)}
     </>
   );
 };

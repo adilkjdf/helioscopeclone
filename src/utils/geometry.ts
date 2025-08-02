@@ -52,7 +52,7 @@ export const calculatePolygonArea = (points: LatLngTuple[], map: Map): number =>
     return areaMeters * FEET_PER_METER * FEET_PER_METER;
 };
 
-const isPointInPolygon = (point: Point, polygon: Point[]): boolean => {
+export const isPointInPolygon = (point: Point, polygon: Point[]): boolean => {
     let isInside = false;
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
         const xi = polygon[i].x, yi = polygon[i].y;
@@ -72,6 +72,73 @@ const pointToLineSegmentDistance = (p: Point, a: Point, b: Point): number => {
     const projection = new Point(a.x + t * (b.x - a.x), a.y + t * (b.y - a.y));
     return p.distanceTo(projection);
 };
+
+const getPixelsPerMeter = (map: Map): number => {
+    const center = map.getCenter();
+    const eastPoint = latLng(center.lat, center.lng + 0.0001);
+    const distanceMeters = center.distanceTo(eastPoint);
+    const centerPx = map.latLngToLayerPoint(center);
+    const eastPx = map.latLngToLayerPoint(eastPoint);
+    const distancePixels = centerPx.distanceTo(eastPx);
+    return distancePixels / distanceMeters;
+}
+
+const lineIntersection = (p1: Point, p2: Point, p3: Point, p4: Point): Point | null => {
+    const d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+    if (Math.abs(d) < 1e-6) return null;
+
+    const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / d;
+    return new Point(p1.x + t * (p2.x - p1.x), p1.y + t * (p2.y - p1.y));
+};
+
+export const calculateInsetPolygon = (points: LatLngTuple[], setbackFeet: number, map: Map): LatLngTuple[] => {
+    if (points.length < 3 || setbackFeet <= 0) return [];
+
+    const pixelsPerMeter = getPixelsPerMeter(map);
+    const setbackPx = setbackFeet / FEET_PER_METER * pixelsPerMeter;
+
+    const containerPoints = points.map(p => map.latLngToContainerPoint(latLng(p)));
+
+    const insetLines: {p1: Point, p2: Point}[] = [];
+
+    for (let i = 0; i < containerPoints.length; i++) {
+        const p1 = containerPoints[i];
+        const p2 = containerPoints[(i + 1) % containerPoints.length];
+
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const normal = new Point(-dy, dx).normalize();
+
+        const testPoint = p1.add(normal);
+        if (!isPointInPolygon(testPoint, containerPoints)) {
+            normal.x = -normal.x;
+            normal.y = -normal.y;
+        }
+
+        const p1_inset = p1.add(normal.multiplyBy(setbackPx));
+        const p2_inset = p2.add(normal.multiplyBy(setbackPx));
+        insetLines.push({ p1: p1_inset, p2: p2_inset });
+    }
+
+    const insetPoints: Point[] = [];
+    for (let i = 0; i < insetLines.length; i++) {
+        const line1 = insetLines[i];
+        const line2 = insetLines[(i + 1) % insetLines.length];
+        const intersection = lineIntersection(line1.p1, line1.p2, line2.p1, line2.p2);
+        if (intersection) {
+            insetPoints.push(intersection);
+        } else {
+            // Fallback for parallel lines - this is a simplification
+            insetPoints.push(line1.p2);
+        }
+    }
+
+    return insetPoints.map(p => {
+        const latLng = map.containerPointToLatLng(p);
+        return [latLng.lat, latLng.lng];
+    });
+};
+
 
 export const calculateAdvancedModuleLayout = (
   segment: FieldSegment,
@@ -123,13 +190,7 @@ export const calculateAdvancedModuleLayout = (
 
   const rotatedBounds = bounds(rotatedPolygon);
   
-  const center = map.getCenter();
-  const eastPoint = latLng(center.lat, center.lng + 0.0001);
-  const distanceMeters = center.distanceTo(eastPoint);
-  const centerPx = map.latLngToLayerPoint(center);
-  const eastPx = map.latLngToLayerPoint(eastPoint);
-  const distancePixels = centerPx.distanceTo(eastPx);
-  const pixelsPerMeter = distancePixels / distanceMeters;
+  const pixelsPerMeter = getPixelsPerMeter(map);
 
   const moduleWidth = orientation === 'Portrait' ? moduleWidthMeters : moduleHeightMeters;
   const moduleHeight = orientation === 'Portrait' ? moduleHeightMeters : moduleWidthMeters;
