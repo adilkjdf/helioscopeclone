@@ -66,11 +66,11 @@ const FieldSegmentLayer: React.FC<FieldSegmentLayerProps> = ({ segment, modules,
     <>
       <Polygon 
         positions={segment.points} 
-        pathOptions={{ color: '#f97316', weight: 2, fillOpacity: 0.2 }} 
+        pathOptions={{ color: '#ca8a04', weight: 2, fillColor: '#fde047', fillOpacity: 0.3 }} 
         eventHandlers={{ click: onSelect }}
       />
       {segment.moduleLayout?.map((modulePolygon, i) => (
-        <Polygon key={i} positions={modulePolygon} pathOptions={{ color: '#3b82f6', weight: 1, fillColor: '#60a5fa', fillOpacity: 0.8 }} />
+        <Polygon key={i} positions={modulePolygon} pathOptions={{ color: 'white', weight: 1, fillColor: '#3b82f6', fillOpacity: 0.8 }} />
       ))}
       {segment.points.map((p, i) => (
         <DraggableMarker key={i} position={p} onDrag={(newLatLng: any) => handleMarkerDrag(i, newLatLng)} />

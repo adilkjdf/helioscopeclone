@@ -84,8 +84,14 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
         moduleTilt: 10,
         orientation: 'Landscape',
         rowSpacing: 2,
-        moduleSpacing: 0.1,
+        moduleSpacing: 0.041,
         setback: 4,
+        surfaceHeight: 0,
+        rackingHeight: 0,
+        frameSizeUp: 1,
+        frameSizeWide: 1,
+        frameSpacing: 0,
+        alignment: 'center',
       };
       const updatedSegments = [...fieldSegments, newSegment];
       setFieldSegments(updatedSegments);

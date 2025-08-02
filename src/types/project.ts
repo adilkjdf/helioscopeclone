@@ -79,12 +79,20 @@ export interface FieldSegment {
   moduleLayout?: LatLngTuple[][]; // Array of polygons for each module
   azimuth: number; // For orientation
   
-  // New properties
+  // New properties from image
   description?: string;
   rackingType?: 'Fixed Tilt' | 'Flush Mount';
+  surfaceHeight?: number;
+  rackingHeight?: number;
   moduleTilt?: number;
   orientation?: 'Portrait' | 'Landscape';
-  rowSpacing?: number;
-  moduleSpacing?: number;
-  setback?: number;
+  frameSizeUp?: number;
+  frameSizeWide?: number;
+  rowSpacing?: number; // In feet
+  spanRise?: number;
+  moduleSpacing?: number; // In feet
+  gcr?: number;
+  frameSpacing?: number;
+  setback?: number; // In feet
+  alignment?: 'left' | 'center' | 'right' | 'justify';
 }
