@@ -1,21 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, MapPin, Settings, Eye, Share2, FileText, Plus, Download, Trash2 } from 'lucide-react';
 import { Design, ProjectData } from '../types/project';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { Map, Marker } from 'react-map-gl';
+import maplibregl from 'maplibre-gl';
 import NewDesignModal from './NewDesignModal';
 import { supabase } from '../integrations/supabase/client';
 
-// Fix for default markers in react-leaflet
-import L from 'leaflet';
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// NOTE: In a production app, this key should be stored in an environment variable.
 const MAPTILER_API_KEY = 'aTChQEvBqKVcP0AXd2bH';
 
 interface ProjectPageProps {
@@ -33,25 +23,16 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
 
   useEffect(() => {
     if (!project.id) return;
-
     const fetchDesigns = async () => {
       try {
-        const { data, error } = await supabase
-          .from('designs')
-          .select('*')
-          .eq('project_id', project.id)
-          .order('created_at', { ascending: false });
-
+        const { data, error } = await supabase.from('designs').select('*').eq('project_id', project.id).order('created_at', { ascending: false });
         if (error) {
           console.error('Error fetching designs:', error);
           setDesigns([]);
         } else if (data) {
           const formattedDesigns: Design[] = data.map(d => ({
-            id: d.id,
-            name: d.name,
-            lastModified: new Date(d.last_modified),
-            nameplate: d.nameplate,
-            field_segments: d.field_segments || [],
+            id: d.id, name: d.name, lastModified: new Date(d.last_modified),
+            nameplate: d.nameplate, field_segments: d.field_segments || [],
           }));
           setDesigns(formattedDesigns);
         }
@@ -60,7 +41,6 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
         setDesigns([]);
       }
     };
-
     fetchDesigns();
   }, [project.id]);
 
@@ -74,33 +54,13 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
 
   const handleSaveDesign = async (designName: string, clonedDesignId?: string) => {
     if (!project.id) return;
-
     const nameplate = clonedDesignId ? designs.find(d => d.id === clonedDesignId)?.nameplate || '-' : '-';
-    
     try {
-      const { data, error } = await supabase
-        .from('designs')
-        .insert({
-          name: designName,
-          project_id: project.id,
-          nameplate: nameplate,
-          last_modified: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error saving design:', error);
-        alert('Failed to save design.');
-        return;
-      }
-
+      const { data, error } = await supabase.from('designs').insert({ name: designName, project_id: project.id, nameplate: nameplate, last_modified: new Date().toISOString() }).select().single();
+      if (error) throw error;
       const newDesign: Design = {
-        id: data.id,
-        name: data.name,
-        lastModified: new Date(data.last_modified),
-        nameplate: data.nameplate,
-        field_segments: data.field_segments || [],
+        id: data.id, name: data.name, lastModified: new Date(data.last_modified),
+        nameplate: data.nameplate, field_segments: data.field_segments || [],
       };
       setDesigns(prev => [newDesign, ...prev]);
     } catch (error) {
@@ -112,12 +72,8 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
   const handleDeleteDesign = async (designId: string) => {
     try {
       const { error } = await supabase.from('designs').delete().eq('id', designId);
-      if (error) {
-        console.error('Error deleting design:', error);
-        alert('Failed to delete design.');
-      } else {
-        setDesigns(prevDesigns => prevDesigns.filter(d => d.id !== designId));
-      }
+      if (error) throw error;
+      setDesigns(prevDesigns => prevDesigns.filter(d => d.id !== designId));
     } catch (error) {
       console.error('Failed to delete design:', error);
       alert('Failed to delete design.');
@@ -125,6 +81,7 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
   };
 
   const renderTabContent = () => {
+    // ... (rest of the tab content remains the same)
     switch (activeTab) {
       case 'designs':
         return (
@@ -357,15 +314,11 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <button
-                onClick={onBack}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
+              <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
               <div>
@@ -376,113 +329,62 @@ const ProjectPage: React.FC<ProjectPageProps> = ({ project, onBack, onSelectDesi
           </div>
         </div>
       </div>
-
       <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Project Overview Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Settings className="w-5 h-5 mr-2 text-orange-500" />
-                Project Overview
+                <Settings className="w-5 h-5 mr-2 text-orange-500" /> Project Overview
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Project</label>
-                  <p className="text-sm text-gray-900">{project.projectName}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Address</label>
-                  <p className="text-sm text-gray-900">{project.address}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Owner</label>
-                  <p className="text-sm text-gray-900">{project.projectName}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Last Modified</label>
-                  <p className="text-sm text-gray-900">Today at {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Location</label>
-                  <p className="text-sm text-gray-900">
-                    ({project.coordinates?.lat.toFixed(4)}, {project.coordinates?.lng.toFixed(4)}) (GMT-5.0)
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Profile</label>
-                  <p className="text-sm text-gray-900">Default {project.projectType}</p>
-                </div>
+              <div className="space-y-4 text-sm">
+                <div><label className="font-medium text-gray-700">Project</label><p>{project.projectName}</p></div>
+                <div><label className="font-medium text-gray-700">Address</label><p>{project.address}</p></div>
+                <div><label className="font-medium text-gray-700">Owner</label><p>{project.projectName}</p></div>
+                <div><label className="font-medium text-gray-700">Last Modified</label><p>Today at {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p></div>
+                <div><label className="font-medium text-gray-700">Location</label><p>({project.coordinates?.lat.toFixed(4)}, {project.coordinates?.lng.toFixed(4)}) (GMT-5.0)</p></div>
+                <div><label className="font-medium text-gray-700">Profile</label><p>Default {project.projectType}</p></div>
               </div>
             </div>
-
-            {/* Project Location Map */}
             <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <div className="p-4 border-b">
-                <h4 className="font-medium text-gray-900 flex items-center">
-                  <MapPin className="w-4 h-4 mr-2 text-orange-500" />
-                  Project Location
-                </h4>
-              </div>
+              <div className="p-4 border-b"><h4 className="font-medium text-gray-900 flex items-center"><MapPin className="w-4 h-4 mr-2 text-orange-500" /> Project Location</h4></div>
               <div className="h-64 relative z-0">
                 {project.coordinates && (
-                  <MapContainer
-                    center={[project.coordinates.lat, project.coordinates.lng]}
-                    zoom={16}
-                    className="h-full w-full"
-                    scrollWheelZoom={false}
+                  <Map
+                    initialViewState={{
+                      longitude: project.coordinates.lng,
+                      latitude: project.coordinates.lat,
+                      zoom: 16
+                    }}
+                    style={{ width: '100%', height: '100%' }}
+                    mapStyle={`https://api.maptiler.com/maps/satellite/style.json?key=${MAPTILER_API_KEY}`}
+                    mapLib={maplibregl}
                   >
-                    <TileLayer
-                      url={`https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=${MAPTILER_API_KEY}`}
-                      attribution='&copy; <a href="https://www.maptiler.com/copyright/" target="_blank">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
-                    />
-                    <Marker position={[project.coordinates.lat, project.coordinates.lng]} />
-                  </MapContainer>
+                    <Marker longitude={project.coordinates.lng} latitude={project.coordinates.lat} color="#f97316" />
+                  </Map>
                 )}
               </div>
             </div>
           </div>
-
-          {/* Main Content */}
           <div className="lg:col-span-3">
-            {/* Tabs */}
             <div className="bg-white rounded-lg shadow-sm border mb-6">
               <div className="border-b">
                 <nav className="flex space-x-8 px-6">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
                     return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                          activeTab === tab.id
-                            ? 'border-orange-500 text-orange-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <Icon className="w-4 h-4" />
-                          <span>{tab.label}</span>
-                        </div>
+                      <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+                        <div className="flex items-center space-x-2"><Icon className="w-4 h-4" /><span>{tab.label}</span></div>
                       </button>
                     );
                   })}
                 </nav>
               </div>
-              <div className="p-6">
-                {renderTabContent()}
-              </div>
+              <div className="p-6">{renderTabContent()}</div>
             </div>
           </div>
         </div>
       </div>
-      <NewDesignModal
-        isOpen={isNewDesignModalOpen}
-        onClose={() => setIsNewDesignModalOpen(false)}
-        onSubmit={handleSaveDesign}
-        existingDesigns={designs}
-      />
+      <NewDesignModal isOpen={isNewDesignModalOpen} onClose={() => setIsNewDesignModalOpen(false)} onSubmit={handleSaveDesign} existingDesigns={designs} />
     </div>
   );
 };
