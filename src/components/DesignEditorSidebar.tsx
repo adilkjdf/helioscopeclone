@@ -1,16 +1,31 @@
 import React, { useState } from 'react';
 import { Design } from '../types/project';
-import { Settings, RotateCcw, RotateCw, LayoutGrid, Eye, Zap, TestTube, Plus, Trash2, Send, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Settings, RotateCcw, RotateCw, LayoutGrid, Eye, Zap, TestTube, Plus, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import DrawingControls from './DrawingControls';
 
 interface DesignEditorSidebarProps {
   design: Design;
   isOpen: boolean;
   onToggle: () => void;
+  isDrawing: boolean;
+  onStartDrawing: () => void;
+  onStopDrawing: () => void;
+  onClearDrawing: () => void;
+  drawingArea: number;
 }
 
 type Tab = 'mechanical' | 'keepouts' | 'electrical' | 'advanced';
 
-const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({ design, isOpen, onToggle }) => {
+const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({ 
+  design, 
+  isOpen, 
+  onToggle,
+  isDrawing,
+  onStartDrawing,
+  onStopDrawing,
+  onClearDrawing,
+  drawingArea
+}) => {
   const [activeTab, setActiveTab] = useState<Tab>('mechanical');
 
   const tabs = [
@@ -27,6 +42,18 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({ design, isOpe
           <PanelLeftOpen className="w-6 h-6 text-gray-600" />
         </button>
       </div>
+    );
+  }
+
+  if (isDrawing) {
+    return (
+      <aside className="w-96 bg-white border-r shadow-lg flex flex-col h-screen">
+        <DrawingControls
+          area={drawingArea}
+          onBack={onStopDrawing}
+          onClear={onClearDrawing}
+        />
+      </aside>
     );
   }
 
@@ -91,7 +118,10 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({ design, isOpe
           <div>
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-semibold text-gray-800">Field Segments</h3>
-              <button className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300 flex items-center space-x-1">
+              <button 
+                onClick={onStartDrawing}
+                className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300 flex items-center space-x-1"
+              >
                 <Plus className="w-4 h-4" />
                 <span>New</span>
               </button>

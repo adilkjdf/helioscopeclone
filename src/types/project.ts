@@ -1,3 +1,5 @@
+import { LatLngTuple } from 'leaflet';
+
 export interface Design {
   id: string;
   created_at?: string;
@@ -47,4 +49,11 @@ export interface Module {
   isc?: number;
   vmp?: number;
   imp?: number;
+}
+
+export interface FieldSegment {
+  id: string;
+  points: LatLngTuple[];
+  area: number;
+  nameplate: number;
 }
