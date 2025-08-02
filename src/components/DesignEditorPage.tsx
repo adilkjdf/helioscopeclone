@@ -103,6 +103,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
             <MapDrawingLayer
               points={drawingPoints}
               onPointsChange={setDrawingPoints}
+              onShapeComplete={handleStopDrawing}
             />
           )}
 

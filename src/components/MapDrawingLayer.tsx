@@ -6,12 +6,14 @@ import { calculateDistanceInFeet, getMidpoint, getSnappedPoint } from '../utils/
 interface MapDrawingLayerProps {
   points: LatLngTuple[];
   onPointsChange: (points: LatLngTuple[]) => void;
+  onShapeComplete: () => void;
 }
 
-const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChange }) => {
+const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChange, onShapeComplete }) => {
   const map = useMap();
   const [mousePos, setMousePos] = useState<LatLngTuple | null>(null);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
+  const [isHoveringStartPoint, setIsHoveringStartPoint] = useState(false);
 
   useEffect(() => {
     map.getContainer().style.cursor = 'crosshair';
@@ -43,6 +45,8 @@ const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChang
   });
 
   map.on('click', (e) => {
+    if (isHoveringStartPoint) return;
+
     let newPoint: LatLngTuple = [e.latlng.lat, e.latlng.lng];
     if (isShiftPressed && points.length > 0) {
       newPoint = getSnappedPoint(points[points.length - 1], newPoint, map);
@@ -50,10 +54,17 @@ const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChang
     onPointsChange([...points, newPoint]);
   });
 
+  const canCloseShape = points.length > 2;
+  const isClosing = canCloseShape && isHoveringStartPoint;
+
+  const primaryColor = '#f97316'; // orange
+  const closingColor = '#22c55e'; // green
+  const currentColor = isClosing ? closingColor : primaryColor;
+
   const ghostLinePoints: LatLngTuple[] = [];
   if (points.length > 0 && mousePos) {
     const lastPoint = points[points.length - 1];
-    const dynamicPoint = isShiftPressed ? getSnappedPoint(lastPoint, mousePos, map) : mousePos;
+    const dynamicPoint = isClosing ? points[0] : (isShiftPressed ? getSnappedPoint(lastPoint, mousePos, map) : mousePos);
     ghostLinePoints.push(lastPoint, dynamicPoint);
   }
 
@@ -62,7 +73,7 @@ const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChang
     const midpoint = getMidpoint(p1, p2);
     const icon = divIcon({
         className: 'leaflet-div-icon-transparent',
-        html: `<div class="bg-black text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">${length.toFixed(1)} ft</div>`
+        html: `<div class="text-white text-sm font-bold" style="text-shadow: 0 0 3px black, 0 0 3px black;">${length.toFixed(1)} ft</div>`
     });
     return <Marker key={`${p1.toString()}-${p2.toString()}`} position={midpoint} icon={icon} />;
   };
@@ -70,13 +81,28 @@ const MapDrawingLayer: React.FC<MapDrawingLayerProps> = ({ points, onPointsChang
   return (
     <>
       {points.length > 0 && (
-        <Polygon positions={points} pathOptions={{ color: '#f97316', weight: 3, fillOpacity: 0.1 }} />
+        <Polygon positions={points} pathOptions={{ color: currentColor, weight: 3, fillOpacity: 0.1 }} />
       )}
       {ghostLinePoints.length > 0 && (
-        <Polyline positions={ghostLinePoints} pathOptions={{ color: '#f97316', weight: 3, dashArray: '5, 10' }} />
+        <Polyline positions={ghostLinePoints} pathOptions={{ color: currentColor, weight: 3, dashArray: '5, 10' }} />
       )}
       {points.map((point, index) => (
-        <CircleMarker key={index} center={point} radius={5} pathOptions={{ color: 'white', fillColor: '#f97316', fillOpacity: 1, weight: 2 }} />
+        <CircleMarker 
+          key={index} 
+          center={point} 
+          radius={5} 
+          pathOptions={{ 
+            color: 'white', 
+            fillColor: isClosing && index === 0 ? closingColor : primaryColor, 
+            fillOpacity: 1, 
+            weight: 2 
+          }}
+          eventHandlers={ index === 0 && canCloseShape ? {
+            mouseover: () => setIsHoveringStartPoint(true),
+            mouseout: () => setIsHoveringStartPoint(false),
+            click: onShapeComplete,
+          } : {}}
+        />
       ))}
       {points.slice(0, -1).map((p, i) => renderMarkerForSegment(p, points[i+1]))}
       {ghostLinePoints.length === 2 && renderMarkerForSegment(ghostLinePoints[0], ghostLinePoints[1])}
