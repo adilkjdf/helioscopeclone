@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
-import Map, { Marker, MapRef } from 'react-map-gl';
+import { Map, Marker, MapRef } from 'react-map-gl';
 import { MapPin, Map as MapIcon, Satellite } from 'lucide-react';
-import * as maplibregl from 'maplibre-gl';
+import maplibregl from 'maplibre-gl';
 
 const MAPTILER_API_KEY = 'aTChQEvBqKVcP0AXd2bH';
 
