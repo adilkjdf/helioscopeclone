@@ -34,6 +34,7 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
   const [fieldSegments, setFieldSegments] = useState<FieldSegment[]>([]);
   const [selectedSegment, setSelectedSegment] = useState<FieldSegment | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
+  const [isRotating, setIsRotating] = useState(false);
 
   useEffect(() => {
     setFieldSegments(design.field_segments || []);
@@ -47,6 +48,25 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
     };
     fetchModules();
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift' && selectedSegment) {
+        setIsRotating(true);
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        setIsRotating(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [selectedSegment]);
 
   const saveFieldSegments = async (segmentsToSave: FieldSegment[]) => {
     try {
@@ -170,6 +190,8 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
               modules={modules} 
               onUpdate={handleUpdateSegment}
               onSelect={() => setSelectedSegment(segment)}
+              isSelected={selectedSegment?.id === segment.id}
+              isRotating={isRotating && selectedSegment?.id === segment.id}
             />
           ))}
         </MapContainer>

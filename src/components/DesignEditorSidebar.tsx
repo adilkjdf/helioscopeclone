@@ -120,8 +120,8 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
           <SelectField label="Racking" id="seg-racking" value={editedSegment.rackingType || ''} onChange={val => handleFieldChange({ rackingType: val as any })} options={rackingOptions} />
           
           <div className="grid grid-cols-2 gap-4">
-            <FormField label="Surface Height" id="seg-surf-h" type="number" value={editedSegment.surfaceHeight || 0} onChange={val => handleFieldChange({ surfaceHeight: parseFloat(val) })} />
-            <FormField label="Racking Height" id="seg-rack-h" type="number" value={editedSegment.rackingHeight || 0} onChange={val => handleFieldChange({ rackingHeight: parseFloat(val) })} />
+            <FormField label="Surface Height (m)" id="seg-surf-h" type="number" value={editedSegment.surfaceHeight || 0} onChange={val => handleFieldChange({ surfaceHeight: parseFloat(val) })} />
+            <FormField label="Racking Height (m)" id="seg-rack-h" type="number" value={editedSegment.rackingHeight || 0} onChange={val => handleFieldChange({ rackingHeight: parseFloat(val) })} />
             <FormField label="Module Azimuth" id="seg-azimuth" type="number" value={editedSegment.azimuth} onChange={val => handleFieldChange({ azimuth: parseFloat(val) })} />
             <FormField label="Module Tilt" id="seg-tilt" type="number" value={editedSegment.moduleTilt || 0} onChange={val => handleFieldChange({ moduleTilt: parseFloat(val) })} />
           </div>

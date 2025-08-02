@@ -3,6 +3,12 @@ import { FieldSegment, Module } from '../types/project';
 
 const FEET_PER_METER = 3.28084;
 
+export const getPolygonCenter = (points: LatLngTuple[]): LatLngTuple => {
+    if (points.length === 0) return [0, 0];
+    const sum = points.reduce((acc, p) => [acc[0] + p[0], acc[1] + p[1]], [0, 0]);
+    return [sum[0] / points.length, sum[1] / points.length];
+};
+
 export const calculateDistanceInFeet = (p1: LatLngTuple, p2: LatLngTuple, map: Map): number => {
   const latLng1 = latLng(p1);
   const latLng2 = latLng(p2);
