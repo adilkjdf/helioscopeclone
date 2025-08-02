@@ -1,4 +1,4 @@
-import { Map, latLng, LatLngTuple, Point } from 'leaflet';
+import { Map, latLng, LatLngTuple, Point, bounds } from 'leaflet';
 
 const FEET_PER_METER = 3.28084;
 
@@ -30,7 +30,7 @@ export const getSnappedPoint = (startPoint: LatLngTuple, endPoint: LatLngTuple, 
     y: startContainerPoint.y + distance * Math.sin(snappedAngleRad),
   };
 
-  const snappedLatLng = map.containerPointToLatLng(snappedContainerPoint);
+  const snappedLatLng = map.containerPointToLatLng(new Point(snappedContainerPoint.x, snappedContainerPoint.y));
   return [snappedLatLng.lat, snappedLatLng.lng];
 };
 
@@ -97,14 +97,14 @@ export const calculateModuleLayout = (
     p.x * sin + p.y * cos
   ));
 
-  const bounds = L.bounds(rotatedPolygon);
+  const rotatedBounds = bounds(rotatedPolygon);
   const moduleLayout: LatLngTuple[][] = [];
 
   const moduleWidthProjected = moduleWidth / map.options.crs!.scale(map.getZoom());
   const moduleHeightProjected = moduleHeight / map.options.crs!.scale(map.getZoom());
 
-  for (let y = bounds.min!.y; y < bounds.max!.y; y += moduleHeightProjected) {
-    for (let x = bounds.min!.x; x < bounds.max!.x; x += moduleWidthProjected) {
+  for (let y = rotatedBounds.min!.y; y < rotatedBounds.max!.y; y += moduleHeightProjected) {
+    for (let x = rotatedBounds.min!.x; x < rotatedBounds.max!.x; x += moduleWidthProjected) {
       const moduleCenter = new Point(x + moduleWidthProjected / 2, y + moduleHeightProjected / 2);
       if (isPointInPolygon(moduleCenter, rotatedPolygon)) {
         const modulePoints = [
