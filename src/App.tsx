@@ -156,6 +156,12 @@ function App() {
         technology: moduleData.technology,
         max_power_pmp: moduleData.max_power_pmp,
         raw_pan_data: moduleData.raw_pan_data,
+        width: moduleData.width,
+        height: moduleData.height,
+        voc: moduleData.voc,
+        isc: moduleData.isc,
+        vmp: moduleData.vmp,
+        imp: moduleData.imp,
       });
 
       if (error) {
