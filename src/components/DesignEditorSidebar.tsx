@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Design, Module, FieldSegment } from '../types/project';
-import { Settings, RotateCcw, RotateCw, LayoutGrid, Eye, Zap, TestTube, Plus, PanelLeftClose, PanelLeftOpen, Trash2, ArrowLeft, Save } from 'lucide-react';
+import { Plus, PanelLeftClose, PanelLeftOpen, Trash2, ArrowLeft, Save } from 'lucide-react';
 import DrawingControls from './DrawingControls';
 import SelectField from './SelectField';
 import FormField from './FormField';
@@ -96,7 +96,19 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
           </button>
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-bold text-gray-800">{editedSegment.description || 'Field Segment'}</h2>
-            <button onClick={() => onDeleteSegment(selectedSegment.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"><Trash2 size={16} /></button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleSaveChanges}
+                disabled={isSaved}
+                className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md disabled:text-gray-300 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                title={isSaved ? "Saved" : "Save Changes"}
+              >
+                <Save size={16} />
+              </button>
+              <button onClick={() => onDeleteSegment(selectedSegment.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md" title="Delete Segment">
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
           <div className="text-sm text-gray-600 mt-1">
             <p>Modules: {selectedSegment.moduleCount} ({selectedSegment.nameplate.toFixed(2)} kW)</p>
@@ -124,18 +136,6 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
               </div>
             </>
           )}
-        </div>
-        <div className="flex-shrink-0 p-4 border-t bg-gray-50">
-            <button
-                onClick={handleSaveChanges}
-                disabled={isSaved}
-                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 
-                           transition-colors disabled:opacity-50 disabled:cursor-not-allowed 
-                           flex items-center justify-center space-x-2 font-semibold"
-            >
-                <Save className="w-5 h-5" />
-                <span>{isSaved ? 'Saved' : 'Save Changes'}</span>
-            </button>
         </div>
       </aside>
     );

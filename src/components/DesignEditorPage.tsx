@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProjectData, Design, FieldSegment, Module } from '../types/project';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import DesignEditorSidebar from './DesignEditorSidebar';
@@ -34,7 +34,6 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
   const [fieldSegments, setFieldSegments] = useState<FieldSegment[]>([]);
   const [selectedSegment, setSelectedSegment] = useState<FieldSegment | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setFieldSegments(design.field_segments || []);
@@ -49,24 +48,19 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
     fetchModules();
   }, []);
 
-  const saveFieldSegments = (segmentsToSave: FieldSegment[]) => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    debounceTimeoutRef.current = setTimeout(async () => {
-      try {
-        const { error } = await supabase
-          .from('designs')
-          .update({ field_segments: segmentsToSave, last_modified: new Date().toISOString() })
-          .eq('id', design.id);
+  const saveFieldSegments = async (segmentsToSave: FieldSegment[]) => {
+    try {
+      const { error } = await supabase
+        .from('designs')
+        .update({ field_segments: segmentsToSave, last_modified: new Date().toISOString() })
+        .eq('id', design.id);
 
-        if (error) {
-          console.error('Error saving field segments:', error);
-        }
-      } catch (error) {
-        console.error('Failed to save field segments:', error);
+      if (error) {
+        console.error('Error saving field segments:', error);
       }
-    }, 1000); // Debounce for 1 second
+    } catch (error) {
+      console.error('Failed to save field segments:', error);
+    }
   };
 
   const handleStartDrawing = () => {
@@ -108,7 +102,8 @@ const DesignEditorPage: React.FC<DesignEditorPageProps> = ({ project, design, on
     setFieldSegments(updatedSegments);
     saveFieldSegments(updatedSegments);
     if (selectedSegment?.id === id) {
-      setSelectedSegment(prev => prev ? { ...prev, ...updates } : null);
+      const newSelectedSegment = updatedSegments.find(seg => seg.id === id);
+      setSelectedSegment(newSelectedSegment || null);
     }
   };
 
